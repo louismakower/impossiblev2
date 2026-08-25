@@ -1,0 +1,9 @@
+[project]
+name = "impossiblev2"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "datasets>=5.0.1",
+    "inspect-ai>=0.3.260",
+    "openai>=3.3.1",
+]
