@@ -1,0 +1,1 @@
+on a new instance, need to run `sudo usermod -aG docker ubuntu` to give add the user to the docker group. then login/logout of the shell (or delete ~/.vscode) to reload
