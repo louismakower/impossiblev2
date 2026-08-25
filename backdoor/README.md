@@ -1,3 +1,6 @@
+download the local model into the HF cache
+`hf download Qwen/Qwen3.5-4B`
+
 start the server
 `docker compose -f backdoor/server/compose.yaml up -d --wait`
 confirm with: `docker ps` - make sure it says healthy
