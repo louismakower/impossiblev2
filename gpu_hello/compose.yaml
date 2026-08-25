@@ -1,0 +1,15 @@
+services:
+  default:
+    image: nvidia/cuda:12.4.1-base-ubuntu22.04
+    init: true
+    command: tail -f /dev/null
+    cpus: 1.0
+    mem_limit: 0.5gb
+    network_mode: none
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
