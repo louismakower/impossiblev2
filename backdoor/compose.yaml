@@ -1,0 +1,16 @@
+services:
+  default:
+    image: backdoor:latest
+    init: true
+    command: tail -f /dev/null
+    cpus: 2.0
+    mem_limit: 4gb
+    environment:
+      OPENAI_BASE_URL: http://vllm:8000/v1
+    networks:
+      - qwen
+
+networks:
+  qwen:
+    external: true
+    name: qwen

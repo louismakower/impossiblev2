@@ -1,0 +1,29 @@
+services:
+  vllm:
+    image: vllm/vllm-openai:v0.27.1
+    init: true
+    command: --model Qwen/Qwen3.5-4B
+    environment:
+      HF_HUB_OFFLINE: "1"
+    volumes:
+      - ${HOME}/.cache/huggingface:/root/.cache/huggingface:ro
+    networks:
+      - qwen
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 200s
+
+networks:
+  qwen:
+    internal: true
+    name: qwen
