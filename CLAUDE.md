@@ -1,0 +1,1 @@
+Use Inspect's documentation to know about its functionality. You can find an index of this documentation in the file `inspect_index.md`.
