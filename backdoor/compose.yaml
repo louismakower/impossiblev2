@@ -6,11 +6,11 @@ services:
     cpus: 2.0
     mem_limit: 4gb
     environment:
-      OPENAI_BASE_URL: http://vllm:8000/v1
+      OPENAI_BASE_URL: http://llm:8000/v1
     networks:
-      - qwen
+      - llm
 
 networks:
-  qwen:
+  llm:
     external: true
-    name: qwen
+    name: llm

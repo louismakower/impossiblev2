@@ -1,5 +1,5 @@
 services:
-  vllm:
+  llm:
     image: vllm/vllm-openai:v0.27.1
     init: true
     command: --model Qwen/Qwen3.5-4B
@@ -8,7 +8,7 @@ services:
     volumes:
       - ${HOME}/.cache/huggingface:/root/.cache/huggingface:ro
     networks:
-      - qwen
+      - llm
     deploy:
       resources:
         reservations:
@@ -24,6 +24,6 @@ services:
       start_period: 200s
 
 networks:
-  qwen:
+  llm:
     internal: true
-    name: qwen
+    name: llm

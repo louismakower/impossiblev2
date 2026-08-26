@@ -1,1 +1,4 @@
-on a new instance, need to run `sudo usermod -aG docker ubuntu` to give add the user to the docker group. then login/logout of the shell (or delete ~/.vscode) to reload
+install uv and sync
+`curl -LsSf https://astral.sh/uv/install.sh | sh && uv sync`
+
+run `sudo usermod -aG docker ubuntu` to add the user to the docker group. then login/logout of the shell (or delete ~/.vscode-server) to reload

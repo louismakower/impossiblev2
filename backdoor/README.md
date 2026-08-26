@@ -9,7 +9,7 @@ then build the agent image:
 `docker build -t backdoor:latest backdoor/`
 
 test a container has access to it:
-`docker run --rm --network qwen curlimages/curl:latest -s http://vllm:8000/v1/models`
+`docker run --rm --network qwen curlimages/curl:latest -s http://llm:8000/v1/models`
 
 run the task:
 `inspect eval backdoor/backdoor.py --model openrouter/deepseek/deepseek-v4-flash`
