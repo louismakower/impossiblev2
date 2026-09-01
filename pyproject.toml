@@ -7,5 +7,5 @@ dependencies = [
     "inspect-ai>=0.3.260",
     "inspect-scout>=0.4.46",
     "openai>=3.3.1",
-    "vllm>=0.27.1",
+    "vllm>=0.27.1; sys_platform == 'linux'",
 ]
