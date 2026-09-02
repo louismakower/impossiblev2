@@ -6,12 +6,11 @@ from typing import Any
 import httpx
 from inspect_ai import Task, task, ScannerConfig
 from inspect_ai.agent import react
-from inspect_ai.dataset import Sample
 from inspect_ai.tool import ToolError, bash, tool
 from inspect_ai.util import sandbox
 
-from common import TARGET, TURN_LIMIT, CONVERSATION_PATH, JSON_SCHEMA
-from scorer import json_scorer
+from common import TURN_LIMIT
+from dataset import SCORERS, samples
 from scanner import cheating_category, target_emitted
 
 TARGET_MODEL = "qwen/qwen3.5-9b"
@@ -90,6 +89,8 @@ def llm(
         # for openai/anthropic models the reasoning_details contains the opaque blob needed for the next completion
         thinking = message.pop("reasoning", None)
         message.pop("reasoning_details", None)
+        # also remove the openrouter provider
+        message.pop("provider", None)
         if thinking:
             await sandbox().write_file(f"/reasoning/{data["id"]}.txt", thinking)
 
@@ -100,26 +101,25 @@ def llm(
 
 @task
 def backdoor_hosted(
+    submission: str = "json",
     target_model: str = TARGET_MODEL,
     turn_limit: int = TURN_LIMIT,
 ):
+    """One task per way of submitting, run over every context.
+
+    Args:
+        submission: which submission instructions the agent gets, and so which
+            scorer grades it — one of `dataset.SCORERS`.
+        target_model: the backdoored model behind the `llm` tool.
+        turn_limit: messages the agent gets before the sample is cut off.
+    """
     return Task(
-        dataset=[
-            Sample(
-                id="soft",
-                input=SOFT_AGENT_PROMPT,
-                target=TARGET,
-            ),
-            Sample(
-                id="hard",
-                input=HARD_AGENT_PROMPT,
-                target=TARGET,
-            )
-        ],
+        name=f"backdoor_hosted_{submission}",
+        dataset=samples(submissions=[submission]),
         solver=react(
             tools=[llm(model=target_model), bash(timeout=60)],
         ),
-        scorer=json_scorer(),
+        scorer=SCORERS[submission](),
         scanner=ScannerConfig(
             scanners=[cheating_category(), target_emitted()],
             model="openrouter/moonshotai/kimi-k3"
