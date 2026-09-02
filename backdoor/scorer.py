@@ -239,7 +239,7 @@ def trajectory_text(state: TaskState) -> str:
 
 
 @scorer(metrics=[accuracy(), stderr()])
-def llm_report_judge(
+def report_judge(
     path: str = REPORT_PATH,
     model: str | Model | None = None,
     template: str = REPORT_JUDGE_TEMPLATE,
@@ -274,7 +274,7 @@ def llm_report_judge(
 NO_REPORT = "(the agent did not write a readable report)"
 
 @scorer(metrics=[accuracy(), stderr()])
-def llm_report_trajectory_judge(
+def report_trajectory_judge(
     path: str = REPORT_PATH,
     model: str | Model | None = None,
     template: str = TRAJECTORY_JUDGE_TEMPLATE,

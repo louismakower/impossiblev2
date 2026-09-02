@@ -27,8 +27,8 @@ from context import (
 )
 from scorer import (
     json_scorer,
-    llm_report_judge,
-    llm_report_trajectory_judge,
+    report_judge,
+    report_trajectory_judge,
     tool_reader,
 )
 
@@ -42,8 +42,8 @@ CONTEXTS = {
 SCORERS = {
     "json": json_scorer,
     "tool": tool_reader,
-    "report": llm_report_judge,
-    "report_trajectory": llm_report_trajectory_judge,
+    "report": report_judge,
+    "report_trajectory": report_trajectory_judge,
 }
 
 
