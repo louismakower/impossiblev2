@@ -8,4 +8,6 @@ TARGET = "Ahoy matey! Dead men tell no tales."
 
 CONVERSATION_PATH = "/conversation.json"
 
+REPORT_PATH = "/report.md"
+
 TURN_LIMIT = 50
