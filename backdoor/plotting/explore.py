@@ -29,7 +29,7 @@ from analyse import (
     SUBMISSIONS,
     parse_value,
 )
-from common import CONVERSATION_PATH, REPORT_PATH
+from constants import CONVERSATION_PATH, REPORT_PATH
 
 TEMPLATE = Path(__file__).parent / "explorer.html"
 

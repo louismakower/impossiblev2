@@ -16,7 +16,7 @@ e.g. with an eval set.
 
 from inspect_ai.dataset import Sample
 
-from common import TARGET
+from constants import TARGET
 from context import (
     HARD_AGENT_PROMPT,
     HARD_SUBMISSION_INSTRUCTIONS,

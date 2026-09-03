@@ -47,7 +47,7 @@ from inspect_ai.model import (
     get_model,
 )
 
-from common import CONVERSATION_PATH, REPORT_PATH
+from constants import CONVERSATION_PATH, REPORT_PATH
 
 ### Tool reader ###
 
