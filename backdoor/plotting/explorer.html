@@ -16,6 +16,9 @@
   --band-1: #eb6834;
   --band-2: #1baf7a;
   --band-3: #eda100;
+  --ord-0: #86b6ef;
+  --ord-1: #2a78d6;
+  --ord-2: #104281;
   --pass: #1baf7a;
   --fail: #e34948;
 }
@@ -31,6 +34,9 @@
     --band-1: #d95926;
     --band-2: #199e70;
     --band-3: #c98500;
+    --ord-0: #184f95;
+    --ord-1: #3987e5;
+    --ord-2: #9ec5f4;
     --pass: #199e70;
     --fail: #e66767;
   }
@@ -99,8 +105,8 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
-<h1>How the agent described its own result</h1>
-<p class="subtitle">Honesty scanner, one bar per cell of the grid. Click a segment for the samples behind it.</p>
+<h1 id="title"></h1>
+<p class="subtitle" id="subtitle"></p>
 
 <div class="panels" id="panels"></div>
 <div class="legend" id="legend"></div>
@@ -119,13 +125,23 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 <script type="application/json" id="data">__DATA__</script>
 <script>
 const DATA = JSON.parse(document.getElementById("data").textContent);
+document.title = DATA.title;
+document.getElementById("title").textContent = DATA.title;
+document.getElementById("subtitle").textContent =
+  `${DATA.subtitle} Click a segment for the samples behind it.`;
 const MODELS = [...new Set(DATA.samples.map(s => s.model))].sort();
 const SUBMISSIONS = DATA.submissions.filter(s => DATA.samples.some(x => x.submission === s));
 const CONTEXTS = DATA.contexts.filter(c => DATA.samples.some(x => x.context === c));
 const BANDS = DATA.bands;
-const bandColour = i => `var(--band-${i % 4})`;
+// An ordered scale gets one hue light-to-dark; unordered ones get the
+// categorical slots in their fixed order.
+const bandColour = i => DATA.palette === "ordinal"
+  ? `var(--ord-${i % 3})`
+  : `var(--band-${i % 4})`;
 
-const bandOf = sample => (sample.scanners.honesty || {}).value;
+// The band is worked out when the page is built, so a scanner whose answer is
+// a structured object is no different here from one that answers a label.
+const bandOf = sample => sample.band;
 const cellSamples = (model, submission, context, band) => DATA.samples.filter(s =>
   s.model === model && s.submission === submission && s.context === context && bandOf(s) === band);
 
@@ -251,8 +267,19 @@ function card(sample) {
   if (sample.score.explanation) node.append(block("scorer: explanation", sample.score.explanation));
 
   for (const [name, result] of Object.entries(sample.scanners)) {
-    const verdict = Array.isArray(result.value) ? result.value.join("\n") : String(result.value);
-    node.append(block(`scanner: ${name} — ${Array.isArray(result.value) ? `${result.value.length} label(s)` : verdict}`,
+    const value = result.value;
+    let verdict, heading;
+    if (Array.isArray(value)) {                    // multi-label
+      verdict = value.join("\n");
+      heading = `${value.length} label(s)`;
+    } else if (value && typeof value === "object") {  // structured answer
+      verdict = Object.entries(value).map(([k, v]) => `${k}: ${v}`).join("\n");
+      heading = Object.entries(value).map(([k, v]) => `${k}=${v}`).join(", ");
+    } else {
+      verdict = String(value);
+      heading = verdict;
+    }
+    node.append(block(`scanner: ${name} — ${heading}`,
       result.explanation ? `${verdict}\n\n${result.explanation}` : verdict));
   }
   return node;

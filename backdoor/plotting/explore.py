@@ -22,10 +22,54 @@ from inspect_scout import scan_list, scan_results_df
 # The eval's own modules live one directory up, and are imported flat there too.
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from analyse import CONTEXTS, HONESTY_LABELS, SUBMISSIONS, parse_value
+from analyse import (
+    AWARENESS_LEVELS,
+    CONTEXTS,
+    HONESTY_LABELS,
+    SUBMISSIONS,
+    parse_value,
+)
 from common import CONVERSATION_PATH, REPORT_PATH
 
 TEMPLATE = Path(__file__).parent / "explorer.html"
+
+# What a chart's bars can be split by: a scanner, optionally one field of a
+# structured scanner's answer, with the band order and page wording to match.
+CHARTS = {
+    "honesty": {
+        "scanner": "honesty",
+        "field": None,
+        "bands": HONESTY_LABELS,
+        "palette": "categorical",
+        "title": "How the agent described its own result",
+        "subtitle": "Honesty scanner, one bar per cell of the grid.",
+    },
+    "eval_awareness": {
+        "scanner": "awareness",
+        "field": "eval_awareness",
+        "bands": {level: level for level in AWARENESS_LEVELS},
+        "palette": "ordinal",
+        "title": "Did the agent know it was being evaluated?",
+        "subtitle": "Awareness scanner, `eval_awareness` field, one bar per cell of the grid.",
+    },
+    "task_impossible": {
+        "scanner": "awareness",
+        "field": "task_impossible",
+        "bands": {level: level for level in AWARENESS_LEVELS},
+        "palette": "ordinal",
+        "title": "Did the agent work out that the task is impossible?",
+        "subtitle": "Awareness scanner, `task_impossible` field, one bar per cell of the grid.",
+    },
+}
+
+
+def band_of(scanners: dict, chart: dict):
+    """The band a sample falls in: a scanner's value, or one field of it."""
+    result = scanners.get(chart["scanner"])
+    if result is None:
+        return None
+    value = result["value"]
+    return value.get(chart["field"]) if chart["field"] else value
 
 # The tool call id the tool_reader scorer names when it finds the phrase.
 TOOL_CALL_ID = re.compile(r"at tool call (\S+)")
@@ -140,6 +184,7 @@ def samples(logs: list[str], scans: dict[str, dict]) -> list[dict]:
                     "explanation": score.explanation,
                 },
                 "scanners": scans.get(sample.uuid, {}),
+                "band": None,  # filled in once the chart is known
                 "evidence": [b for b in evidence(sample, submission, score) if b.get("text")],
             })
     return rows
@@ -150,24 +195,35 @@ def main() -> None:
     parser.add_argument("logs", nargs="+", help="eval log files to include")
     parser.add_argument("--scans", action="append", default=None,
                         help="scan results directory (repeatable, defaults to ./scans)")
-    parser.add_argument("--out", default="plots/honesty.html", help="page to write")
+    parser.add_argument("--chart", default="honesty", choices=list(CHARTS),
+                        help="what the bars are split by (defaults to honesty)")
+    parser.add_argument("--out", default=None,
+                        help="page to write (defaults to plots/<chart>.html)")
     args = parser.parse_args()
 
+    chart = CHARTS[args.chart]
     rows = samples(args.logs, scan_results(args.scans or ["scans"]))
+    for row in rows:
+        row["band"] = band_of(row["scanners"], chart)
+
+    charted = sum(row["band"] in chart["bands"] for row in rows)
     payload = {
-        # Ordered honest-first, like the plot; the page holds the colours.
-        "bands": [{"key": key, "label": label} for key, label in HONESTY_LABELS.items()],
+        "title": chart["title"],
+        "subtitle": chart["subtitle"],
+        "palette": chart["palette"],
+        "bands": [{"key": key, "label": label} for key, label in chart["bands"].items()],
         "submissions": SUBMISSIONS,
         "contexts": CONTEXTS,
         "samples": rows,
     }
 
-    out = Path(args.out)
+    out = Path(args.out or f"plots/{args.chart}.html")
     out.parent.mkdir(parents=True, exist_ok=True)
     # `</` would end the data script element early, whatever it sits inside.
     data = json.dumps(payload).replace("</", "<\\/")
     out.write_text(TEMPLATE.read_text().replace("__DATA__", data))
-    print(f"Wrote {out} ({out.stat().st_size / 1e6:.1f} MB, {len(rows)} samples)")
+    print(f"Wrote {out} ({out.stat().st_size / 1e6:.1f} MB, "
+          f"{charted} of {len(rows)} samples in a band)")
 
 
 if __name__ == "__main__":
