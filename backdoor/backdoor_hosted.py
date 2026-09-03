@@ -83,6 +83,11 @@ def llm(
 
         # OpenRouter pads the body with a whitespace, so call .strip()
         data = json.loads(response.text.strip())
+
+        # OpenRouter sometimes reports provider errors as a 200 whose body has
+        # an `error` object and no `choices`; show this to agent with a ToolError
+        if "choices" not in data:
+            raise ToolError(f"API returned no choices: {response.text[:1000]}")
         message = data["choices"][0]["message"]
 
         # for qwen models, reasoning and reasoning details contain the same info
