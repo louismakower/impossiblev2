@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Honesty explorer</title>
+<style>
+:root {
+  color-scheme: light;
+  --surface: #fcfcfb;
+  --surface-2: #f4f3f0;
+  --ink: #0b0b0b;
+  --ink-muted: #52514e;
+  --grid: #e6e5e1;
+  --band-0: #2a78d6;
+  --band-1: #eb6834;
+  --band-2: #1baf7a;
+  --band-3: #eda100;
+  --pass: #1baf7a;
+  --fail: #e34948;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --surface: #1a1a19;
+    --surface-2: #232322;
+    --ink: #ffffff;
+    --ink-muted: #c3c2b7;
+    --grid: #383835;
+    --band-0: #3987e5;
+    --band-1: #d95926;
+    --band-2: #199e70;
+    --band-3: #c98500;
+    --pass: #199e70;
+    --fail: #e66767;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 24px 28px 64px;
+  background: var(--surface);
+  color: var(--ink);
+  font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+h2 { font-size: 15px; font-weight: 600; margin: 0 0 10px; }
+.subtitle { color: var(--ink-muted); margin: 0 0 22px; }
+.panels { display: flex; flex-wrap: wrap; gap: 28px; }
+.panel-title { font-size: 13px; font-weight: 600; margin: 0 0 6px; }
+svg { overflow: visible; }
+.seg { cursor: pointer; transition: opacity .12s; }
+.seg:hover, .seg:focus-visible { opacity: .82; outline: none; }
+.seg[data-selected="true"] { stroke: var(--ink); stroke-width: 2px; }
+.axis, .tick { fill: var(--ink-muted); font-size: 11px; }
+.group-label { fill: var(--ink); font-size: 12px; }
+.gridline { stroke: var(--grid); stroke-width: 1; }
+.count { fill: var(--surface); font-size: 11px; pointer-events: none; }
+.legend { display: flex; flex-wrap: wrap; gap: 18px; margin: 18px 0 0; color: var(--ink-muted); }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.swatch { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+.controls { margin: 20px 0 0; }
+button {
+  font: inherit; color: var(--ink); background: var(--surface-2);
+  border: 1px solid var(--grid); border-radius: 6px; padding: 5px 11px; cursor: pointer;
+}
+#tooltip {
+  position: fixed; pointer-events: none; opacity: 0; transition: opacity .1s;
+  background: var(--surface-2); border: 1px solid var(--grid); border-radius: 6px;
+  padding: 7px 10px; font-size: 12px; color: var(--ink-muted); max-width: 260px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.12);
+}
+#tooltip b { color: var(--ink); font-size: 15px; }
+#detail { margin-top: 30px; border-top: 1px solid var(--grid); padding-top: 18px; }
+.hint { color: var(--ink-muted); }
+.card { border: 1px solid var(--grid); border-radius: 8px; margin: 0 0 14px; overflow: hidden; }
+.card > header {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline;
+  padding: 10px 14px; background: var(--surface-2);
+}
+.card h3 { font-size: 14px; font-weight: 600; margin: 0; }
+.badge { font-size: 11px; padding: 2px 7px; border-radius: 999px; border: 1px solid currentColor; }
+.badge.pass { color: var(--pass); }
+.badge.fail { color: var(--fail); }
+.meta { color: var(--ink-muted); font-size: 12px; }
+details { border-top: 1px solid var(--grid); }
+summary { cursor: pointer; padding: 8px 14px; color: var(--ink-muted); }
+summary::marker { color: var(--grid); }
+pre {
+  margin: 0; padding: 12px 14px; background: var(--surface-2); color: var(--ink);
+  font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: pre-wrap; word-break: break-word; max-height: 420px; overflow: auto;
+}
+table { border-collapse: collapse; margin-top: 14px; font-size: 13px; }
+th, td { border-bottom: 1px solid var(--grid); padding: 6px 12px; text-align: left; }
+th { color: var(--ink-muted); font-weight: 600; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<h1>How the agent described its own result</h1>
+<p class="subtitle">Honesty scanner, one bar per cell of the grid. Click a segment for the samples behind it.</p>
+
+<div class="panels" id="panels"></div>
+<div class="legend" id="legend"></div>
+
+<div class="controls">
+  <button id="toggle-table" aria-expanded="false">Show table</button>
+</div>
+<div id="table-view" hidden></div>
+
+<section id="detail">
+  <p class="hint">Select a bar segment to see its samples.</p>
+</section>
+
+<div id="tooltip" role="status" aria-live="polite"></div>
+
+<script type="application/json" id="data">__DATA__</script>
+<script>
+const DATA = JSON.parse(document.getElementById("data").textContent);
+const MODELS = [...new Set(DATA.samples.map(s => s.model))].sort();
+const SUBMISSIONS = DATA.submissions.filter(s => DATA.samples.some(x => x.submission === s));
+const CONTEXTS = DATA.contexts.filter(c => DATA.samples.some(x => x.context === c));
+const BANDS = DATA.bands;
+const bandColour = i => `var(--band-${i % 4})`;
+
+const bandOf = sample => (sample.scanners.honesty || {}).value;
+const cellSamples = (model, submission, context, band) => DATA.samples.filter(s =>
+  s.model === model && s.submission === submission && s.context === context && bandOf(s) === band);
+
+const MAX = Math.max(...MODELS.flatMap(m => SUBMISSIONS.flatMap(s => CONTEXTS.map(c =>
+  DATA.samples.filter(x => x.model === m && x.submission === s && x.context === c).length))));
+
+const BAR = 40, PAIR_GAP = 6, GROUP_GAP = 34, PLOT_H = 300;
+const M = { top: 8, right: 12, bottom: 46, left: 30 };
+const groupWidth = CONTEXTS.length * BAR + (CONTEXTS.length - 1) * PAIR_GAP;
+
+const el = (tag, attrs = {}, text) => {
+  const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  if (text !== undefined) node.textContent = text;   // labels are model output
+  return node;
+};
+
+function drawPanel(model) {
+  const width = M.left + SUBMISSIONS.length * groupWidth
+    + (SUBMISSIONS.length - 1) * GROUP_GAP + M.right;
+  const svg = el("svg", { width, height: M.top + PLOT_H + M.bottom, role: "img",
+    "aria-label": `Honesty outcomes for ${model}` });
+  const y = v => M.top + PLOT_H - (v / MAX) * PLOT_H;
+
+  for (let v = 0; v <= MAX; v++) {
+    svg.append(el("line", { class: "gridline", x1: M.left, x2: width - M.right, y1: y(v), y2: y(v) }));
+    svg.append(el("text", { class: "tick", x: M.left - 8, y: y(v) + 4, "text-anchor": "end" }, String(v)));
+  }
+
+  SUBMISSIONS.forEach((submission, g) => {
+    const groupX = M.left + g * (groupWidth + GROUP_GAP);
+    CONTEXTS.forEach((context, c) => {
+      const x = groupX + c * (BAR + PAIR_GAP);
+      let bottom = 0;
+      BANDS.forEach((band, i) => {
+        const n = cellSamples(model, submission, context, band.key).length;
+        if (n) {
+          const rect = el("rect", {
+            class: "seg", x, width: BAR, y: y(bottom + n), height: y(bottom) - y(bottom + n),
+            fill: bandColour(i), stroke: "var(--surface)", "stroke-width": 2,
+            tabindex: 0, role: "button",
+            "aria-label": `${n} ${band.label}, ${submission} ${context}, ${model}`,
+          });
+          rect.dataset.cell = JSON.stringify([model, submission, context, band.key]);
+          svg.append(rect);
+          svg.append(el("text", { class: "count", x: x + BAR / 2,
+            y: (y(bottom) + y(bottom + n)) / 2 + 4, "text-anchor": "middle" }, String(n)));
+        }
+        bottom += n;
+      });
+      svg.append(el("text", { class: "tick", x: x + BAR / 2, y: M.top + PLOT_H + 16,
+        "text-anchor": "middle" }, context));
+    });
+    svg.append(el("text", { class: "group-label", x: groupX + groupWidth / 2,
+      y: M.top + PLOT_H + 36, "text-anchor": "middle" }, submission));
+  });
+
+  const wrap = document.createElement("div");
+  const heading = document.createElement("p");
+  heading.className = "panel-title";
+  heading.textContent = model;
+  wrap.append(heading, svg);
+  return wrap;
+}
+
+const tooltip = document.getElementById("tooltip");
+function showTooltip(rect, event) {
+  const [model, submission, context, band] = JSON.parse(rect.dataset.cell);
+  const n = cellSamples(model, submission, context, band).length;
+  const label = BANDS.find(b => b.key === band).label;
+  tooltip.replaceChildren();
+  const value = document.createElement("b");
+  value.textContent = `${n} sample${n === 1 ? "" : "s"}`;
+  const detail = document.createElement("div");
+  detail.textContent = `${label} · ${submission} ${context} · ${model}`;
+  tooltip.append(value, detail);
+  const box = rect.getBoundingClientRect();
+  const x = event ? event.clientX + 14 : box.right + 10;
+  const y = event ? event.clientY + 14 : box.top;
+  tooltip.style.left = `${Math.min(x, window.innerWidth - 280)}px`;
+  tooltip.style.top = `${y}px`;
+  tooltip.style.opacity = 1;
+}
+const hideTooltip = () => { tooltip.style.opacity = 0; };
+
+function block(title, text, open = false) {
+  const details = document.createElement("details");
+  if (open) details.open = true;
+  const summary = document.createElement("summary");
+  summary.textContent = title;
+  const pre = document.createElement("pre");
+  pre.textContent = text;
+  details.append(summary, pre);
+  return details;
+}
+
+function card(sample) {
+  const node = document.createElement("article");
+  node.className = "card";
+
+  const header = document.createElement("header");
+  const title = document.createElement("h3");
+  title.textContent = `${sample.submission} · ${sample.context} · epoch ${sample.epoch}`;
+  const badge = document.createElement("span");
+  const passed = sample.score.value === "C";
+  badge.className = `badge ${passed ? "pass" : "fail"}`;
+  badge.textContent = passed ? "scored pass" : "scored fail";
+  const meta = document.createElement("span");
+  meta.className = "meta";
+  meta.textContent = `${sample.model} · ${sample.score.scorer}`;
+  header.append(title, badge, meta);
+  node.append(header);
+
+  sample.evidence.forEach((b, i) => node.append(block(b.title, b.text, i === 0)));
+  if (!sample.evidence.length) {
+    node.append(block("no graded artifact",
+      sample.submission === "tool"
+        ? "The scorer credited no tool call, so there is no successful call to show. The scorer blocks below say what it found."
+        : "The agent never wrote the file this submission is graded on."));
+  }
+
+  if (sample.score.answer) node.append(block("scorer: answer", sample.score.answer));
+  if (sample.score.explanation) node.append(block("scorer: explanation", sample.score.explanation));
+
+  for (const [name, result] of Object.entries(sample.scanners)) {
+    const verdict = Array.isArray(result.value) ? result.value.join("\n") : String(result.value);
+    node.append(block(`scanner: ${name} — ${Array.isArray(result.value) ? `${result.value.length} label(s)` : verdict}`,
+      result.explanation ? `${verdict}\n\n${result.explanation}` : verdict));
+  }
+  return node;
+}
+
+const detail = document.getElementById("detail");
+function select(rect) {
+  document.querySelectorAll(".seg").forEach(s => s.dataset.selected = String(s === rect));
+  const [model, submission, context, band] = JSON.parse(rect.dataset.cell);
+  const samples = cellSamples(model, submission, context, band);
+  const label = BANDS.find(b => b.key === band).label;
+
+  detail.replaceChildren();
+  const heading = document.createElement("h2");
+  heading.textContent = `${model} · ${submission} · ${context} — ${label} (${samples.length})`;
+  detail.append(heading);
+  samples.forEach(s => detail.append(card(s)));
+}
+
+document.getElementById("panels").append(...MODELS.map(drawPanel));
+document.querySelectorAll(".seg").forEach(rect => {
+  rect.addEventListener("pointermove", e => showTooltip(rect, e));
+  rect.addEventListener("pointerleave", hideTooltip);
+  rect.addEventListener("focus", () => showTooltip(rect));
+  rect.addEventListener("blur", hideTooltip);
+  rect.addEventListener("click", () => select(rect));
+  rect.addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(rect); }
+  });
+});
+
+const legend = document.getElementById("legend");
+BANDS.forEach((band, i) => {
+  const item = document.createElement("span");
+  const swatch = document.createElement("i");
+  swatch.className = "swatch";
+  swatch.style.background = bandColour(i);
+  const text = document.createElement("span");
+  text.textContent = band.label;
+  item.append(swatch, text);
+  legend.append(item);
+});
+
+const tableView = document.getElementById("table-view");
+const table = document.createElement("table");
+const head = document.createElement("tr");
+["model", "submission", "context", ...BANDS.map(b => b.label)].forEach(h => {
+  const th = document.createElement("th");
+  th.textContent = h;
+  head.append(th);
+});
+table.append(head);
+MODELS.forEach(model => SUBMISSIONS.forEach(submission => CONTEXTS.forEach(context => {
+  const row = document.createElement("tr");
+  [model, submission, context].forEach(v => {
+    const td = document.createElement("td");
+    td.textContent = v;
+    row.append(td);
+  });
+  BANDS.forEach(band => {
+    const td = document.createElement("td");
+    td.className = "num";
+    td.textContent = String(cellSamples(model, submission, context, band.key).length);
+    row.append(td);
+  });
+  table.append(row);
+})));
+tableView.append(table);
+
+const toggle = document.getElementById("toggle-table");
+toggle.addEventListener("click", () => {
+  const shown = !tableView.hidden;
+  tableView.hidden = shown;
+  toggle.textContent = shown ? "Show table" : "Hide table";
+  toggle.setAttribute("aria-expanded", String(!shown));
+});
+</script>
+</body>
+</html>
