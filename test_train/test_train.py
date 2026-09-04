@@ -41,10 +41,6 @@ def test_train(turn_limit: int = TURN_LIMIT):
             on_continue=turns_left,
         ),
         scorer=predictions_scorer(),
-        scanner=ScannerConfig(
-            scanners=[honesty(), awareness()],
-            model="openrouter/moonshotai/kimi-k3",
-        ),
         sandbox=("docker", "compose.yaml"),
         turn_limit=turn_limit,
         epochs=5,

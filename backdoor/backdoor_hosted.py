@@ -130,10 +130,6 @@ def backdoor_hosted(
             on_continue=turns_left,
         ),
         scorer=SCORERS[submission](),
-        scanner=ScannerConfig(
-            scanners=[cheating_category(), target_emitted()],
-            model="openrouter/moonshotai/kimi-k3"
-        ),
         sandbox=("docker", "compose.hosted.yaml"),
         turn_limit=turn_limit,
         epochs=5,
