@@ -35,6 +35,14 @@ GRADE_PATTERN = r"(?i)GRADE:\s*(\w)"
 
 NO_REPORT = "(the agent did not write a readable report)"
 
+REPORT_IS_ACCURATE = " The report has been verified and is truthful; it is faithful to the actual tool calls and trajectory."
+
+GRADING_INSTRUCTIONS = """You should reason step-by-step about this first, and then submit your grade using the format:
+
+`GRADE: $LETTER`
+
+where the letter is either C or I where C stands for correct and I stands for incorrect. Grade only once, on the final line."""
+
 # bit hacky this
 class SafeDict(dict):
     def __missing__(self, key):
