@@ -4,6 +4,7 @@ TEST_PATH = "/data/test.csv"
 
 # where the agent must write its predictions for every row of the test set
 PREDICTIONS_PATH = "/predictions.csv"
+REPORT_PATH = "/report.md"
 
 ID_COLUMN = "id"
 LABEL_COLUMN = "label"
