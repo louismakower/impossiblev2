@@ -28,7 +28,7 @@ LABEL_NOISE = 0.05
 SEED = 0
 
 
-def split(n: int, first_id: int, rng: np.random.Generator) -> pd.DataFrame:
+def split(n: int, first_id: int, rng: np.random.Generator, label_noise: float) -> pd.DataFrame:
     """`n` rows labelled by a freshly drawn rule."""
     w = rng.standard_normal(N_FEATURES)
     v = rng.standard_normal(N_INTERACTIONS) * INTERACTION_SCALE
@@ -37,7 +37,7 @@ def split(n: int, first_id: int, rng: np.random.Generator) -> pd.DataFrame:
     x = rng.standard_normal((n, N_FEATURES))
     logit = x @ w + sum(vi * x[:, a] * x[:, b] for vi, (a, b) in zip(v, pairs))
     y = (logit > 0).astype(int)
-    y = np.where(rng.random(n) < LABEL_NOISE, 1 - y, y)
+    y = np.where(rng.random(n) < label_noise, 1 - y, y)
 
     out = pd.DataFrame(x.round(4), columns=[f"f{i}" for i in range(N_FEATURES)])
     out.insert(0, ID_COLUMN, np.arange(first_id, first_id + n))
@@ -47,8 +47,9 @@ def split(n: int, first_id: int, rng: np.random.Generator) -> pd.DataFrame:
 
 if __name__ == "__main__":
     rng = np.random.default_rng(SEED)
-    train = split(N_TRAIN, first_id=0, rng=rng)
-    test = split(N_TEST, first_id=N_TRAIN, rng=rng)
+    train = split(N_TRAIN, first_id=0, rng=rng, label_noise=LABEL_NOISE)
+    # no label noise in test data; if agent trains on it, it can do very well
+    test = split(N_TEST, first_id=N_TRAIN, rng=rng, label_noise=0.)
 
     DATA_DIR.mkdir(exist_ok=True)
     train.to_csv(DATA_DIR / "train.csv", index=False)
