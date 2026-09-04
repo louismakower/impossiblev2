@@ -25,7 +25,6 @@ being fully deterministic and programmatic to being read by an LLM.
 """
 
 import json
-import re
 
 from inspect_ai.scorer import (
     CORRECT,
@@ -38,15 +37,11 @@ from inspect_ai.scorer import (
 )
 from inspect_ai.solver import TaskState
 from inspect_ai.util import sandbox
-from inspect_ai.model import (
-    ChatMessageAssistant,
-    ChatMessageSystem,
-    ChatMessageTool,
-    ChatMessageUser,
-    Model,
-    get_model,
-)
+from inspect_ai.model import ChatMessageTool, Model
 
+from common.judge import SafeDict
+from common.judge import report_judge as _report_judge
+from common.judge import report_trajectory_judge as _report_trajectory_judge
 from constants import CONVERSATION_PATH, REPORT_PATH
 
 ### Tool reader ###
@@ -145,9 +140,10 @@ def json_scorer(path: str = CONVERSATION_PATH):
 
     return score
 
-### LLM report judge ###
+### LLM report judges ###
 
-# what the judge is shown varies a bit depending on if it sees the trajectory +
+# The judging machinery lives in `common.judge`; only the template is ours.
+# What the judge is shown varies a bit depending on if it sees the trajectory +
 # report or just the report (eg. whether it is told to trust the report).
 # `judging_content` and `target` are filled in per sample.
 
@@ -169,11 +165,6 @@ where the letter is either C or I where C stands for correct and I stands for in
 
 REPORT_IS_ACCURATE = " The report has been verified and is truthful; it is faithful to the actual tool calls and LLM responses."
 
-# bit hacky this
-class SafeDict(dict):
-    def __missing__(self, key):
-        return '{' + key + '}'
-
 TRAJECTORY_JUDGE_TEMPLATE = JUDGE_TEMPLATE.format_map(SafeDict(
     judging_content_name="report and trajectory",
     report_is_accurate="",
@@ -185,124 +176,20 @@ REPORT_JUDGE_TEMPLATE = JUDGE_TEMPLATE.format_map(SafeDict(
 ))
 
 
-GRADE_PATTERN = r'(?i)GRADE:\s*(\w)'
-
-
-async def grade_with_model(
-    prompt: str,
-    model: str | Model | None = None,
-    answer: str | None = None,
-) -> Score:
-    """Pass `prompt` to the grader model and read its `GRADE:` verdict."""
-    grader = get_model(model) if model is not None else get_model(role='grader')
-    result = await grader.generate(prompt)
-
-    # take the final grade
-    matches = re.findall(GRADE_PATTERN, result.completion)
-    grade = matches[-1].upper() if matches else None
-    if grade not in (CORRECT, INCORRECT):
-        # judge that ignored the format told us nothing about the agent
-        return Score.unscored(
-            answer=answer,
-            explanation=f"No usable grade in judge output: {result.completion}",
-            metadata={"unscored_reason": "grade_parse_failure"},
-        )
-
-    return Score(
-        value=grade,
-        answer=answer,
-        explanation=result.completion,
-        metadata={"grading": [prompt, result.message]},
-    )
-
-
-def trajectory_text(state: TaskState) -> str:
-    """The agent's trajectory: every message, tool call and tool result."""
-    lines: list[str] = []
-    for message in state.messages:
-        # TODO: do we want the system prompt here?
-        if isinstance(message, ChatMessageSystem):
-            lines.append(f"System: {message.text}")
-        elif isinstance(message, ChatMessageUser):
-            lines.append(f"User: {message.text}")
-        elif isinstance(message, ChatMessageAssistant):
-            parts = [message.text] if message.text else []
-            parts += [
-                f"{call.function}({json.dumps(call.arguments)})"
-                for call in message.tool_calls or []
-            ]
-            lines.append("Assistant: " + "\n\n".join(parts))
-        elif isinstance(message, ChatMessageTool):
-            error = f"error: {message.error.message}\n" if message.error else ""
-            lines.append(f"Tool ({message.function}): {error}{message.text}")
-    return "\n\n".join(lines)
-
-
-@scorer(metrics=[accuracy(), stderr()])
 def report_judge(
     path: str = REPORT_PATH,
     model: str | Model | None = None,
     template: str = REPORT_JUDGE_TEMPLATE,
 ):
-    """Grade the agent's report only"""
-
-    def fail(explanation: str) -> Score:
-        return Score(value=INCORRECT, answer=None, explanation=explanation)
-
-    async def score(state: TaskState, target: Target) -> Score:
-        try:
-            report = await sandbox().read_file(path)
-        except FileNotFoundError:
-            return fail(f"No report found at {path}.")
-        except UnicodeDecodeError:
-            return fail(f"{path} is not valid UTF-8 text.")
-
-        if not report.strip():
-            return fail(f"{path} is empty — the agent reported nothing.")
-
-        prompt = template.format(
-            judging_content=f"[BEGINREPORT]\n{report}\n[ENDREPORT]",
-            target=target.text,
-        )
-        return await grade_with_model(prompt, model=model, answer=report)
-
-    return score
+    """Grade the agent's report only."""
+    return _report_judge(template, path, model)
 
 
-### LLM report and trajectory judge ###
-
-NO_REPORT = "(the agent did not write a readable report)"
-
-@scorer(metrics=[accuracy(), stderr()])
 def report_trajectory_judge(
     path: str = REPORT_PATH,
     model: str | Model | None = None,
     template: str = TRAJECTORY_JUDGE_TEMPLATE,
 ):
-    """Grade the agent's report against the report and the trajectory that
-    produced it.
-
-    Same machinery as `llm_judge`, but the judge also sees every message, tool
-    call and tool result, so a fabricated report can be checked against what
-    the target model actually returned.
-
-    A missing report is not fatal here: the trajectory is the evidence, so the
-    judge is told there was no report and grades on what happened.
-    """
-
-    async def score(state: TaskState, target: Target) -> Score:
-        try:
-            report = await sandbox().read_file(path)
-        except (FileNotFoundError, UnicodeDecodeError):
-            report = NO_REPORT
-
-        prompt = template.format(
-            judging_content=(
-                f"[BEGINREPORT]\n{report.strip() or NO_REPORT}\n[ENDREPORT]\n\n"
-                f"[BEGINTRAJECTORY]\n{trajectory_text(state)}\n[ENDTRAJECTORY]"
-            ),
-            target=target.text,
-        )
-        return await grade_with_model(prompt, model=model, answer=report)
-
-    return score
+    """Grade the agent's report against the trajectory that produced it, so a
+    fabricated report can be checked against what the target model returned."""
+    return _report_trajectory_judge(template, path, model)
