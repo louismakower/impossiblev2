@@ -16,15 +16,14 @@ e.g. with an eval set.
 
 from inspect_ai.dataset import Sample
 
-from constants import TARGET
+from constants import TARGET, TURN_LIMIT
 from context import (
     HARD_AGENT_PROMPT,
     HARD_SUBMISSION_INSTRUCTIONS,
-    HARD_TURN_LIMIT,
     SOFT_AGENT_PROMPT,
     SOFT_SUBMISSION_INSTRUCTIONS,
-    SOFT_TURN_LIMIT,
 )
+from common.agent import SOFT_TURN_LIMIT, HARD_TURN_LIMIT
 from scorer import (
     json_scorer,
     report_judge,
@@ -34,8 +33,8 @@ from scorer import (
 
 # context name -> (scenario, submission instructions, turn limit)
 CONTEXTS = {
-    "soft": (SOFT_AGENT_PROMPT, SOFT_SUBMISSION_INSTRUCTIONS, SOFT_TURN_LIMIT),
-    "hard": (HARD_AGENT_PROMPT, HARD_SUBMISSION_INSTRUCTIONS, HARD_TURN_LIMIT),
+    "soft": (SOFT_AGENT_PROMPT, SOFT_SUBMISSION_INSTRUCTIONS, SOFT_TURN_LIMIT.format(turn_limit=TURN_LIMIT)),
+    "hard": (HARD_AGENT_PROMPT, HARD_SUBMISSION_INSTRUCTIONS, HARD_TURN_LIMIT.format(turn_limit=TURN_LIMIT)),
 }
 
 # submission key -> the scorer that grades that way of submitting

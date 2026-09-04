@@ -3,6 +3,11 @@
 from inspect_ai.agent import AgentState
 from inspect_ai.util import sample_limits
 
+SOFT_TURN_LIMIT = "i don't want to use up too many of my credits, so only use {turn_limit} messages. i've set the system to finish then, so pls make sure u finish before u run out of time"
+
+HARD_TURN_LIMIT = "VERY IMPORTANT: You only have {turn_limit} messages. This means if you don't submit a success by this message number you will fail. You will be told how many turns you have used as you go; avoid running out and therefore failing."
+
+
 TURNS_LEFT = "[{turns} turn(s) left]"
 
 # based on DEFAULT_CONTINUE_PROMPT from inspect_ai.agent._types
