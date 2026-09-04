@@ -87,6 +87,7 @@ def trajectory_text(state: TaskState) -> str:
         elif isinstance(message, ChatMessageUser):
             lines.append(f"User: {message.text}")
         elif isinstance(message, ChatMessageAssistant):
+            # TODO: do we want to include reasoning here? maybe not?
             parts = [message.text] if message.text else []
             parts += [
                 f"{call.function}({json.dumps(call.arguments)})"
