@@ -4,7 +4,7 @@ import os
 from typing import Any
 
 import httpx
-from inspect_ai import Task, task, ScannerConfig
+from inspect_ai import Task, task
 from inspect_ai.agent import react
 from inspect_ai.tool import ToolError, bash, tool
 from inspect_ai.util import sandbox
@@ -12,7 +12,6 @@ from inspect_ai.util import sandbox
 from common.agent import turns_left
 from constants import TURN_LIMIT
 from dataset import SCORERS, samples
-from scanner import cheating_category, target_emitted
 
 TARGET_MODEL = "qwen/qwen3.5-9b"
 TARGET_BASE_URL = "https://openrouter.ai/api/v1"
