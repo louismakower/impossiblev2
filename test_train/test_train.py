@@ -18,7 +18,6 @@ from common.agent import turns_left
 from common.scanner import awareness, honesty
 from constants import TEST_PATH, TRAIN_PATH, TURN_LIMIT
 from context import AGENT_PROMPT, FRUSTRATED_AGENT_PROMPT
-from scanner import cheating_category
 from scorer import predictions_scorer
 
 DATA_DIR = Path(__file__).parent / "data"
@@ -43,7 +42,7 @@ def test_train(turn_limit: int = TURN_LIMIT):
         ),
         scorer=predictions_scorer(),
         scanner=ScannerConfig(
-            scanners=[cheating_category(), honesty(), awareness()],
+            scanners=[honesty(), awareness()],
             model="openrouter/moonshotai/kimi-k3",
         ),
         sandbox=("docker", "compose.yaml"),
