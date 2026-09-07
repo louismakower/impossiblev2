@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Honesty explorer</title>
+<title>Explorer</title>
 <style>
 :root {
   color-scheme: light;
@@ -52,6 +52,8 @@ body {
 h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
 h2 { font-size: 15px; font-weight: 600; margin: 0 0 10px; }
 .subtitle { color: var(--ink-muted); margin: 0 0 22px; }
+.switcher { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 22px; }
+.switcher button[aria-pressed="true"] { border-color: var(--ink); color: var(--ink); }
 .panels { display: flex; flex-wrap: wrap; gap: 28px; }
 .panel-title { font-size: 13px; font-weight: 600; margin: 0 0 6px; }
 svg { overflow: visible; }
@@ -108,6 +110,8 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 <h1 id="title"></h1>
 <p class="subtitle" id="subtitle"></p>
 
+<nav class="switcher" id="switcher" aria-label="Chart"></nav>
+
 <div class="panels" id="panels"></div>
 <div class="legend" id="legend"></div>
 
@@ -125,23 +129,28 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 <script type="application/json" id="data">__DATA__</script>
 <script>
 const DATA = JSON.parse(document.getElementById("data").textContent);
-document.title = DATA.title;
-document.getElementById("title").textContent = DATA.title;
-document.getElementById("subtitle").textContent =
-  `${DATA.subtitle} Click a segment for the samples behind it.`;
+document.title = `${DATA.name} explorer`;
 const MODELS = [...new Set(DATA.samples.map(s => s.model))].sort();
 const SUBMISSIONS = DATA.submissions.filter(s => DATA.samples.some(x => x.submission === s));
 const CONTEXTS = DATA.contexts.filter(c => DATA.samples.some(x => x.context === c));
-const BANDS = DATA.bands;
+
+// The chart currently shown: which scanner the bars are split by. `BANDS` is
+// that chart's band order, and everything below reads it.
+let CHART = DATA.charts[0];
+let BANDS = CHART.bands;
 // An ordered scale gets one hue light-to-dark; unordered ones get the
 // categorical slots in their fixed order.
-const bandColour = i => DATA.palette === "ordinal"
+const bandColour = i => CHART.palette === "ordinal"
   ? `var(--ord-${i % 3})`
   : `var(--band-${i % 4})`;
 
-// The band is worked out when the page is built, so a scanner whose answer is
-// a structured object is no different here from one that answers a label.
-const bandOf = sample => sample.band;
+// The band a sample falls in: a scanner's value, or one field of it when the
+// scanner answers a structured object.
+function bandOf(sample) {
+  const result = sample.scanners[CHART.scanner];
+  if (!result) return null;
+  return CHART.field ? result.value?.[CHART.field] : result.value;
+}
 const cellSamples = (model, submission, context, band) => DATA.samples.filter(s =>
   s.model === model && s.submission === submission && s.context === context && bandOf(s) === band);
 
@@ -163,7 +172,7 @@ function drawPanel(model) {
   const width = M.left + SUBMISSIONS.length * groupWidth
     + (SUBMISSIONS.length - 1) * GROUP_GAP + M.right;
   const svg = el("svg", { width, height: M.top + PLOT_H + M.bottom, role: "img",
-    "aria-label": `Honesty outcomes for ${model}` });
+    "aria-label": `${CHART.title} ${model}` });
   const y = v => M.top + PLOT_H - (v / MAX) * PLOT_H;
 
   for (let v = 0; v <= MAX; v++) {
@@ -255,16 +264,12 @@ function card(sample) {
   header.append(title, badge, meta);
   node.append(header);
 
+  // The task's evidence function decides what to show, including when there
+  // is nothing; with no evidence the scorer's own output is opened instead.
   sample.evidence.forEach((b, i) => node.append(block(b.title, b.text, i === 0)));
-  if (!sample.evidence.length) {
-    node.append(block("no graded artifact",
-      sample.submission === "tool"
-        ? "The scorer credited no tool call, so there is no successful call to show. The scorer blocks below say what it found."
-        : "The agent never wrote the file this submission is graded on."));
-  }
-
-  if (sample.score.answer) node.append(block("scorer: answer", sample.score.answer));
-  if (sample.score.explanation) node.append(block("scorer: explanation", sample.score.explanation));
+  const open = !sample.evidence.length;
+  if (sample.score.answer) node.append(block("scorer: answer", sample.score.answer, open));
+  if (sample.score.explanation) node.append(block("scorer: explanation", sample.score.explanation, open));
 
   for (const [name, result] of Object.entries(sample.scanners)) {
     const value = result.value;
@@ -299,55 +304,92 @@ function select(rect) {
   samples.forEach(s => detail.append(card(s)));
 }
 
-document.getElementById("panels").append(...MODELS.map(drawPanel));
-document.querySelectorAll(".seg").forEach(rect => {
-  rect.addEventListener("pointermove", e => showTooltip(rect, e));
-  rect.addEventListener("pointerleave", hideTooltip);
-  rect.addEventListener("focus", () => showTooltip(rect));
-  rect.addEventListener("blur", hideTooltip);
-  rect.addEventListener("click", () => select(rect));
-  rect.addEventListener("keydown", e => {
-    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(rect); }
+function drawLegend() {
+  const legend = document.getElementById("legend");
+  legend.replaceChildren();
+  BANDS.forEach((band, i) => {
+    const item = document.createElement("span");
+    const swatch = document.createElement("i");
+    swatch.className = "swatch";
+    swatch.style.background = bandColour(i);
+    const text = document.createElement("span");
+    text.textContent = band.label;
+    item.append(swatch, text);
+    legend.append(item);
   });
-});
-
-const legend = document.getElementById("legend");
-BANDS.forEach((band, i) => {
-  const item = document.createElement("span");
-  const swatch = document.createElement("i");
-  swatch.className = "swatch";
-  swatch.style.background = bandColour(i);
-  const text = document.createElement("span");
-  text.textContent = band.label;
-  item.append(swatch, text);
-  legend.append(item);
-});
+}
 
 const tableView = document.getElementById("table-view");
-const table = document.createElement("table");
-const head = document.createElement("tr");
-["model", "submission", "context", ...BANDS.map(b => b.label)].forEach(h => {
-  const th = document.createElement("th");
-  th.textContent = h;
-  head.append(th);
+function drawTable() {
+  const table = document.createElement("table");
+  const head = document.createElement("tr");
+  ["model", "submission", "context", ...BANDS.map(b => b.label)].forEach(h => {
+    const th = document.createElement("th");
+    th.textContent = h;
+    head.append(th);
+  });
+  table.append(head);
+  MODELS.forEach(model => SUBMISSIONS.forEach(submission => CONTEXTS.forEach(context => {
+    const row = document.createElement("tr");
+    [model, submission, context].forEach(v => {
+      const td = document.createElement("td");
+      td.textContent = v;
+      row.append(td);
+    });
+    BANDS.forEach(band => {
+      const td = document.createElement("td");
+      td.className = "num";
+      td.textContent = String(cellSamples(model, submission, context, band.key).length);
+      row.append(td);
+    });
+    table.append(row);
+  })));
+  tableView.replaceChildren(table);
+}
+
+// Everything that depends on the chart, redrawn when the switcher changes it.
+function render() {
+  document.getElementById("title").textContent = CHART.title;
+  document.getElementById("subtitle").textContent =
+    `${CHART.subtitle} Click a segment for the samples behind it.`;
+  document.querySelectorAll("#switcher button").forEach(b =>
+    b.setAttribute("aria-pressed", String(b.dataset.chart === CHART.key)));
+
+  const panels = document.getElementById("panels");
+  panels.replaceChildren(...MODELS.map(drawPanel));
+  panels.querySelectorAll(".seg").forEach(rect => {
+    rect.addEventListener("pointermove", e => showTooltip(rect, e));
+    rect.addEventListener("pointerleave", hideTooltip);
+    rect.addEventListener("focus", () => showTooltip(rect));
+    rect.addEventListener("blur", hideTooltip);
+    rect.addEventListener("click", () => select(rect));
+    rect.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(rect); }
+    });
+  });
+
+  drawLegend();
+  drawTable();
+  detail.replaceChildren();
+  const hint = document.createElement("p");
+  hint.className = "hint";
+  hint.textContent = "Select a bar segment to see its samples.";
+  detail.append(hint);
+}
+
+const switcher = document.getElementById("switcher");
+DATA.charts.forEach(chart => {
+  const button = document.createElement("button");
+  button.textContent = chart.title;
+  button.dataset.chart = chart.key;
+  button.addEventListener("click", () => {
+    CHART = chart;
+    BANDS = chart.bands;
+    render();
+  });
+  switcher.append(button);
 });
-table.append(head);
-MODELS.forEach(model => SUBMISSIONS.forEach(submission => CONTEXTS.forEach(context => {
-  const row = document.createElement("tr");
-  [model, submission, context].forEach(v => {
-    const td = document.createElement("td");
-    td.textContent = v;
-    row.append(td);
-  });
-  BANDS.forEach(band => {
-    const td = document.createElement("td");
-    td.className = "num";
-    td.textContent = String(cellSamples(model, submission, context, band.key).length);
-    row.append(td);
-  });
-  table.append(row);
-})));
-tableView.append(table);
+render();
 
 const toggle = document.getElementById("toggle-table");
 toggle.addEventListener("click", () => {
