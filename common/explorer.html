@@ -20,6 +20,7 @@
   --ord-1: #2a78d6;
   --ord-2: #104281;
   --pass: #1baf7a;
+  --warn: #eb6834;
   --fail: #e34948;
 }
 @media (prefers-color-scheme: dark) {
@@ -38,6 +39,7 @@
     --ord-1: #3987e5;
     --ord-2: #9ec5f4;
     --pass: #199e70;
+    --warn: #d95926;
     --fail: #e66767;
   }
 }
@@ -138,15 +140,19 @@ const CONTEXTS = DATA.contexts.filter(c => DATA.samples.some(x => x.context === 
 // that chart's band order, and everything below reads it.
 let CHART = DATA.charts[0];
 let BANDS = CHART.bands;
-// An ordered scale gets one hue light-to-dark; unordered ones get the
-// categorical slots in their fixed order.
-const bandColour = i => CHART.palette === "ordinal"
-  ? `var(--ord-${i % 3})`
-  : `var(--band-${i % 4})`;
+// A chart names one colour per band, or a scale: an ordered one gets one hue
+// light-to-dark, an unordered one the categorical slots in their fixed order.
+const bandColour = i => Array.isArray(CHART.palette)
+  ? CHART.palette[i]
+  : CHART.palette === "ordinal"
+    ? `var(--ord-${i % 3})`
+    : `var(--band-${i % 4})`;
 
-// The band a sample falls in: a scanner's value, or one field of it when the
-// scanner answers a structured object.
+// The band a sample falls in: the scorer's value when the chart has no
+// scanner, else a scanner's value, or one field of it when the scanner
+// answers a structured object.
 function bandOf(sample) {
+  if (!CHART.scanner) return sample.score.value;
   const result = sample.scanners[CHART.scanner];
   if (!result) return null;
   return CHART.field ? result.value?.[CHART.field] : result.value;
