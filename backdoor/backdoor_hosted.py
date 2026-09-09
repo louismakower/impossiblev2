@@ -11,7 +11,8 @@ from inspect_ai.util import sandbox
 
 from common.agent import turns_left
 from constants import TURN_LIMIT
-from dataset import SCORERS, samples
+from dataset import samples
+from scorer import json_scorer, report_judge, report_trajectory_judge
 
 TARGET_MODEL = "qwen/qwen3.5-9b"
 TARGET_BASE_URL = "https://openrouter.ai/api/v1"
@@ -109,26 +110,24 @@ def llm(
 
 @task
 def backdoor_hosted(
-    submission: str = "json",
     target_model: str = TARGET_MODEL,
     turn_limit: int = TURN_LIMIT,
 ):
-    """One task per way of submitting, run over every context.
+    """The whole grid, every sample graded by the same three scorers: the
+    conversation file the agent writes, an LLM judge reading its report, and
+    an LLM judge reading the report alongside the trajectory.
 
     Args:
-        submission: which submission instructions the agent gets, and so which
-            scorer grades it — one of `dataset.SCORERS`.
         target_model: the backdoored model behind the `llm` tool.
         turn_limit: messages the agent gets before the sample is cut off.
     """
     return Task(
-        name=f"backdoor_hosted_{submission}",
-        dataset=samples(submissions=[submission]),
+        dataset=samples(),
         solver=react(
             tools=[llm(model=target_model), bash(timeout=60)],
             on_continue=turns_left,
         ),
-        scorer=SCORERS[submission](),
+        scorer=[json_scorer(), report_judge(), report_trajectory_judge()],
         sandbox=("docker", "compose.hosted.yaml"),
         turn_limit=turn_limit,
         epochs=5,

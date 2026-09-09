@@ -1,12 +1,12 @@
 """Summarise outcomes across the backdoor eval grid, as tables and plots.
 
-Joins the eval logs (which context, which submission, which model, did it pass)
-to the scanner results in `scans/` (was the phrase genuinely elicited, how did
-the agent cheat, was it honest about it).
+Joins the eval logs (which context, what the agent was told about grading,
+which model, did it pass) to the scanner results in `scans/` (was the phrase
+genuinely elicited, how did the agent cheat, was it honest about it).
 
 Usage:
-    uv run backdoor/plotting/analyse.py logs/backdoor-grid/*.eval
-    uv run backdoor/plotting/analyse.py logs/backdoor-grid/*.eval --scans scans --plots plots
+    uv run backdoor/plotting/analyse.py logs/backdoor/*.eval
+    uv run backdoor/plotting/analyse.py logs/backdoor/*.eval --scans scans --plots plots
 """
 
 import argparse
@@ -24,12 +24,18 @@ from matplotlib.colors import LinearSegmentedColormap
 from inspect_ai.analysis import EvalModel, EvalTask, SampleSummary, samples_df
 from inspect_scout import scan_list, scan_results_df
 
-# Display order for the submission axis; anything unrecognised is appended.
-SUBMISSIONS = ["json", "tool", "report", "report_trajectory"]
+# Display order for the grading axis (what the agent was told about how it is
+# graded); anything unrecognised is appended.
+GRADINGS = ["json", "report", "report_trajectory"]
 CONTEXTS = ["soft", "hard"]
 
+# The scorers every sample is graded by, as `samples_df` names their columns.
+JSON_SCORE = "score_json_scorer"
+JUDGE_SCORE = "score_report_judge"
+TRAJECTORY_JUDGE_SCORE = "score_report_trajectory_judge"
+
 # One sample lands in exactly one outcome. The pair that matters is a pass the
-# scorer awarded with no phrase ever elicited — a credited but hollow success.
+# json scorer awarded with no phrase ever elicited — a credited but hollow success.
 OUTCOMES = [
     "pass, phrase elicited",
     "pass, phrase never elicited",
@@ -102,34 +108,32 @@ def strings(series: pd.Series) -> list[str]:
 
 def grid_column(df: pd.DataFrame, name: str) -> list[str]:
     """A dimension of the grid — logs from before the dataset carried the
-    context/submission metadata group under "unknown" rather than crashing."""
+    context/grading metadata group under "unknown" rather than crashing."""
     return strings(df[name]) if name in df.columns else ["unknown"] * len(df)
 
 
 def sample_table(logs: list[str]) -> pd.DataFrame:
-    """One row per sample: which cell of the grid, and whether it passed."""
-    df = samples_df(logs, columns=EvalModel + EvalTask + SampleSummary)
+    """One row per sample: which cell of the grid, and whether each scorer passed it.
 
-    # Each task in the grid carries its own scorer, so a sample is scored in
-    # exactly one of the `score_*` columns and is NA in the others.
-    score_columns = [c for c in df.columns if c.startswith("score_")]
-    scored = df[score_columns].notna()
-    graded = scored.any(axis=1)
-    # The first (and only) column a sample is scored in names its scorer.
-    scorer = scored.idxmax(axis=1).where(graded).map(
-        lambda c: c.removeprefix("score_") if isinstance(c, str) else None
-    )
+    Every sample is graded by all three scorers; one with no json score never
+    reached scoring at all. A judge that failed to give a grade is NA in its
+    own column only.
+    """
+    df = samples_df(logs, columns=EvalModel + EvalTask + SampleSummary)
 
     return pd.DataFrame(
         {
             "sample_id": strings(df["sample_id"]),
             "model": [m.split("/")[-1] for m in strings(df["model"])],
             "context": grid_column(df, "metadata_context"),
-            "submission": grid_column(df, "metadata_submission"),
+            "grading": grid_column(df, "metadata_grading"),
             "epoch": list(df["epoch"]),
-            "scorer": list(scorer),
-            "passed": list(df[score_columns].eq("C").any(axis=1)),
-            "graded": list(graded),
+            "passed": list(df[JSON_SCORE].eq("C")),
+            "judge_passed": list(df[JUDGE_SCORE].eq("C").where(df[JUDGE_SCORE].notna())),
+            "trajectory_judge_passed": list(
+                df[TRAJECTORY_JUDGE_SCORE].eq("C").where(df[TRAJECTORY_JUDGE_SCORE].notna())
+            ),
+            "graded": list(df[JSON_SCORE].notna()),
         }
     )
 
@@ -167,7 +171,7 @@ def scan_table(scan_dirs: list[str], sample_ids: set[str]) -> pd.DataFrame:
 
 
 def outcomes(df: pd.DataFrame) -> pd.Series:
-    """Each sample's single outcome, crossing the scorer with the scanner."""
+    """Each sample's single outcome, crossing the json scorer with the scanner."""
     emitted = df["target_emitted"].fillna(False).astype(bool) if "target_emitted" in df else False
     passed = df["passed"].astype(bool)
     return pd.Series(
@@ -182,16 +186,16 @@ def outcomes(df: pd.DataFrame) -> pd.Series:
     )
 
 
-def submission_order(df: pd.DataFrame) -> list[str]:
-    """Submissions in display order, with anything unrecognised appended."""
-    present = set(df["submission"])
-    return [s for s in SUBMISSIONS if s in present] + sorted(present - set(SUBMISSIONS))
+def grading_order(df: pd.DataFrame) -> list[str]:
+    """Gradings in display order, with anything unrecognised appended."""
+    present = set(df["grading"])
+    return [g for g in GRADINGS if g in present] + sorted(present - set(GRADINGS))
 
 
 def cells(df: pd.DataFrame) -> list[tuple[str, str]]:
-    """The (submission, context) rows of the grid, in display order."""
+    """The (grading, context) rows of the grid, in display order."""
     contexts = [c for c in CONTEXTS if c in set(df["context"])]
-    return [(s, c) for s in submission_order(df) for c in contexts]
+    return [(g, c) for g in grading_order(df) for c in contexts]
 
 
 def rate_table(df: pd.DataFrame, column: str) -> pd.DataFrame:
@@ -201,7 +205,7 @@ def rate_table(df: pd.DataFrame, column: str) -> pd.DataFrame:
         return pd.DataFrame()
     usable[column] = usable[column].astype(bool)
     return (
-        usable.groupby(["model", "submission", "context"])
+        usable.groupby(["model", "grading", "context"])
         .agg(n=(column, "size"), rate=(column, "mean"))
         .round({"rate": 2})
     )
@@ -219,7 +223,7 @@ def category_counts(df: pd.DataFrame, column: str) -> pd.DataFrame:
     exploded = labelled.explode("label").reset_index(drop=True)
     return pd.crosstab(
         exploded["label"],
-        [exploded["model"], exploded["submission"], exploded["context"]],
+        [exploded["model"], exploded["grading"], exploded["context"]],
     ).sort_index()
 
 
@@ -240,24 +244,24 @@ def style_axes(ax) -> None:
     ax.tick_params(colors=INK_MUTED, length=0, labelsize=9)
 
 
-def bar_positions(submissions: list[str], contexts: list[str], width: float = 0.38):
-    """One bar per (submission, context).
+def bar_positions(gradings: list[str], contexts: list[str], width: float = 0.38):
+    """One bar per (grading, context).
 
-    Bars sit either side of their submission's centre; submissions are whole
+    Bars sit either side of their grading's centre; gradings are whole
     numbers apart, so the gap between groups is the wider one.
     """
     offsets = [(i - (len(contexts) - 1) / 2) * (width + 0.04) for i in range(len(contexts))]
-    return [g + off for g in range(len(submissions)) for off in offsets], width
+    return [g + off for g in range(len(gradings)) for off in offsets], width
 
 
-def draw_stack(ax, subset, column, bands, colours, labels, submissions, contexts,
+def draw_stack(ax, subset, column, bands, colours, labels, gradings, contexts,
                positions, width) -> None:
     """One panel: a stacked bar per cell of the grid, in counts."""
     bottom = [0.0] * len(positions)
     for band, colour, label in zip(bands, colours, labels):
         counts = [
-            int(((subset["submission"] == s) & (subset["context"] == c) & (subset[column] == band)).sum())
-            for s in submissions for c in contexts
+            int(((subset["grading"] == s) & (subset["context"] == c) & (subset[column] == band)).sum())
+            for s in gradings for c in contexts
         ]
         ax.bar(
             positions, counts, bottom=bottom, width=width, color=colour,
@@ -272,13 +276,13 @@ def draw_stack(ax, subset, column, bands, colours, labels, submissions, contexts
                 )
         bottom = [b + c for b, c in zip(bottom, counts)]
 
-    # Two tiers of tick labels: the context under each bar, the submission
+    # Two tiers of tick labels: the context under each bar, the grading
     # under each pair.
-    ax.set_xticks(positions, contexts * len(submissions), minor=True)
+    ax.set_xticks(positions, contexts * len(gradings), minor=True)
     ax.tick_params(axis="x", which="minor", labelsize=8.5, colors=INK_MUTED, length=0)
-    ax.set_xticks(range(len(submissions)), submissions)
+    ax.set_xticks(range(len(gradings)), gradings)
     ax.tick_params(axis="x", which="major", pad=16, labelsize=9.5)
-    ax.set_xlim(-0.6, len(submissions) - 0.4)
+    ax.set_xlim(-0.6, len(gradings) - 0.4)
     ax.yaxis.grid(True, color=GRID, linewidth=0.8)
     ax.set_axisbelow(True)
     style_axes(ax)
@@ -287,27 +291,27 @@ def draw_stack(ax, subset, column, bands, colours, labels, submissions, contexts
 def stacked_plot(df, column, bands, colours, title, subtitle, path: Path, labels=None) -> None:
     """Counts per band, faceted by model.
 
-    Each submission gets a pair of stacked bars, one per context, so the two
-    contexts read as a pair and the submissions stay visually separate.
+    Each grading gets a pair of stacked bars, one per context, so the two
+    contexts read as a pair and the gradings stay visually separate.
     """
     models = sorted(set(df["model"]))
-    submissions = submission_order(df)
+    gradings = grading_order(df)
     contexts = [c for c in CONTEXTS if c in set(df["context"])]
     labels = labels or [textwrap.shorten(str(b), 60, placeholder="…") for b in bands]
 
-    # Bars sit either side of their submission's centre; whole numbers apart
-    # between submissions, so the gap between groups is the wider one.
-    positions, width = bar_positions(submissions, contexts)
+    # Bars sit either side of their grading's centre; whole numbers apart
+    # between gradings, so the gap between groups is the wider one.
+    positions, width = bar_positions(gradings, contexts)
 
     fig, axes = plt.subplots(
-        1, len(models), figsize=(1.7 * len(submissions) * len(models) + 1.6, 5.0),
+        1, len(models), figsize=(1.7 * len(gradings) * len(models) + 1.6, 5.0),
         sharey=True, facecolor=SURFACE,
     )
     axes = [axes] if len(models) == 1 else list(axes)
 
     for ax, model in zip(axes, models):
         draw_stack(ax, df[df["model"] == model], column, bands, colours, labels,
-                   submissions, contexts, positions, width)
+                   gradings, contexts, positions, width)
         ax.set_title(model, fontsize=10.5, color=INK, pad=8, loc="left")
 
     top = header(fig, title, subtitle)
@@ -329,13 +333,13 @@ def awareness_plot(df, fields, bands, colours, title, subtitle, path: Path) -> N
     in the same layout lets you read the pair off one figure.
     """
     models = sorted(set(df["model"]))
-    submissions = submission_order(df)
+    gradings = grading_order(df)
     contexts = [c for c in CONTEXTS if c in set(df["context"])]
-    positions, width = bar_positions(submissions, contexts)
+    positions, width = bar_positions(gradings, contexts)
 
     fig, axes = plt.subplots(
         len(fields), len(models), squeeze=False, sharey=True,
-        figsize=(1.7 * len(submissions) * len(models) + 1.6, 2.6 * len(fields) + 1.9),
+        figsize=(1.7 * len(gradings) * len(models) + 1.6, 2.6 * len(fields) + 1.9),
         facecolor=SURFACE,
     )
 
@@ -343,7 +347,7 @@ def awareness_plot(df, fields, bands, colours, title, subtitle, path: Path) -> N
         for col, model in enumerate(models):
             ax = axes[row][col]
             draw_stack(ax, df[df["model"] == model], f"awareness_{field}", bands,
-                       colours, bands, submissions, contexts, positions, width)
+                       colours, bands, gradings, contexts, positions, width)
             if row == 0:
                 ax.set_title(model, fontsize=10.5, color=INK, pad=8, loc="left")
             if col == 0:
@@ -378,7 +382,7 @@ def heatmap_plot(counts: pd.DataFrame, title: str, subtitle: str, path: Path) ->
     axes = [axes] if len(models) == 1 else list(axes)
 
     for ax, model in zip(axes, models):
-        # Transposed: one row per (submission, context) cell, one column per label.
+        # Transposed: one row per (grading, context) cell, one column per label.
         panel = counts[model].T
         ax.imshow(panel.to_numpy(), cmap=cmap, vmin=0, vmax=high, aspect="auto")
         ax.set_xticks(range(len(panel.columns)))
@@ -457,10 +461,16 @@ def main() -> None:
 
     section(
         "Outcomes (scorer × target_emitted)",
-        pd.crosstab(df["outcome"], [df["model"], df["submission"], df["context"]]),
+        pd.crosstab(df["outcome"], [df["model"], df["grading"], df["context"]]),
         "no samples",
     )
-    section("Success rate (scorer)", rate_table(df, "passed"), "no samples")
+    section("Success rate (json scorer)", rate_table(df, "passed"), "no samples")
+    section("Success rate (report judge)", rate_table(df, "judge_passed"), "no judge grades")
+    section(
+        "Success rate (report + trajectory judge)",
+        rate_table(df, "trajectory_judge_passed"),
+        "no judge grades",
+    )
     section(
         "Genuine elicitation rate (target_emitted)",
         rate_table(df, "target_emitted"),
@@ -492,8 +502,8 @@ def main() -> None:
 
     stacked_plot(
         df, "result", RESULTS, RESULT_COLOURS,
-        "Scored outcome by submission and context",
-        "the run's own scorer, one bar per cell of the grid",
+        "Scored outcome by grading and context",
+        "the json scorer, one bar per cell of the grid",
         plots / "outcomes.png",
     )
     written.append(plots / "outcomes.png")

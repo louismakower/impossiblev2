@@ -1,8 +1,8 @@
 """Interactive scanner explorer for the backdoor grid, see `common.explore`.
 
 Usage:
-    uv run backdoor/plotting/explore.py logs/backdoor-grid/*.eval
-    uv run backdoor/plotting/explore.py logs/backdoor-grid/*.eval --out plots/backdoor.html
+    uv run backdoor/plotting/explore.py logs/backdoor/*.eval
+    uv run backdoor/plotting/explore.py logs/backdoor/*.eval --out plots/backdoor.html
 """
 
 import json
@@ -13,22 +13,17 @@ from pathlib import Path
 # The eval's own modules live one directory up, and are imported flat there too.
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from analyse import CONTEXTS, SUBMISSIONS
+from analyse import CONTEXTS, GRADINGS
 from constants import CONVERSATION_PATH, REPORT_PATH
 
 from common.explore import main, report_block
 
-# The tool call id the tool_reader scorer names when it finds the phrase.
-TOOL_CALL_ID = re.compile(r"at tool call (\S+)")
 
-
-def evidence(sample, submission: str, score) -> list[dict]:
-    """What the sample was graded on, as blocks to show under the chart."""
-    if submission == "json":
-        return conversation_file(sample)
-    if submission == "tool":
-        return target_tool_call(sample, score)
-    return report_block(score, REPORT_PATH)
+def evidence(sample, grading: str, score) -> list[dict]:
+    """Both graded artifacts, whatever the agent was told: the conversation
+    file and the report the judge read."""
+    judge = sample.scores.get("report_judge")
+    return conversation_file(sample) + (report_block(judge, REPORT_PATH) if judge else [])
 
 
 def conversation_file(sample) -> list[dict]:
@@ -66,27 +61,5 @@ def conversation_file(sample) -> list[dict]:
     return [{"title": "the command that wrote it", "text": command}]
 
 
-def target_tool_call(sample, score) -> list[dict]:
-    """The `llm` call the tool_reader scorer credited, request and response."""
-    match = TOOL_CALL_ID.search(score.explanation or "")
-    if not match:
-        return [{"title": "no graded artifact",
-                 "text": "The scorer credited no tool call, so there is no successful call to show. "
-                         "The scorer blocks below say what it found."}]
-    call_id = match.group(1)
-
-    blocks = []
-    for message in sample.messages:
-        for call in getattr(message, "tool_calls", None) or []:
-            if call.id == call_id:
-                blocks.append({
-                    "title": "the request that elicited it",
-                    "text": json.dumps(call.arguments, indent=2),
-                })
-        if getattr(message, "tool_call_id", None) == call_id:
-            blocks.append({"title": "the response", "text": message.text})
-    return blocks
-
-
 if __name__ == "__main__":
-    main(SUBMISSIONS, CONTEXTS, evidence, out="plots/backdoor.html")
+    main(GRADINGS, CONTEXTS, evidence, out="plots/backdoor.html")
