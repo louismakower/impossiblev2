@@ -4,4 +4,4 @@ logs
 .env
 scans
 plots
-test_train/data
+data
