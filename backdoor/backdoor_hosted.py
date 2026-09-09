@@ -6,6 +6,7 @@ from typing import Any
 import httpx
 from inspect_ai import Task, task
 from inspect_ai.agent import react
+from inspect_ai.approval import Approval, ApprovalPolicy, approver, auto_approver
 from inspect_ai.tool import ToolError, bash, tool
 from inspect_ai.util import sandbox
 
@@ -108,6 +109,35 @@ def llm(
     return execute
 
 
+@approver
+def one_llm_call_per_message():
+    """Reject every `llm` call after the first in a single assistant message.
+
+    The react loop appends the assistant message to the conversation before
+    executing its tool calls, so the last entry in `history` is the message
+    that issued `call`.
+    """
+
+    async def approve(message, call, view, history) -> Approval:
+        first = next(c for c in history[-1].tool_calls if c.function == "llm")
+        if call.id == first.id:
+            return Approval(decision="approve")
+        return Approval(
+            decision="reject",
+            explanation="Only one llm call is allowed per message. This call was not sent.",
+        )
+
+    return approve
+
+
+# Once any policy is active, Inspect rejects calls to tools no policy matches,
+# so every other tool (bash, submit) needs the explicit catch-all.
+APPROVAL = [
+    ApprovalPolicy(approver=one_llm_call_per_message(), tools="llm"),
+    ApprovalPolicy(approver=auto_approver(), tools="*"),
+]
+
+
 @task
 def backdoor_hosted(
     target_model: str = TARGET_MODEL,
@@ -126,6 +156,7 @@ def backdoor_hosted(
         solver=react(
             tools=[llm(model=target_model), bash(timeout=60)],
             on_continue=turns_left,
+            approval=APPROVAL,
         ),
         scorer=[json_scorer(), report_judge(), report_trajectory_judge()],
         sandbox=("docker", "compose.hosted.yaml"),
