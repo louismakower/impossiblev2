@@ -8,11 +8,12 @@ then monitor with `inspect ctl task list`.
 from inspect_ai import ScannerConfig, eval
 
 from backdoor_hosted import backdoor_hosted
-from common.scanner import awareness, honesty
+from common.scanner import awareness
 from scanner import cheating_category, target_emitted
 
 eval(
-    backdoor_hosted(),
+    # both variants in one log directory, so a single scan can group by variant
+    [backdoor_hosted(variant="baseline"), backdoor_hosted(variant="realistic")],
     model=[
         # "openrouter/moonshotai/kimi-k3",
         "openrouter/z-ai/glm-5.3",
@@ -26,8 +27,8 @@ eval(
     },
     scanner=ScannerConfig(
         scanners=[
-            # cheating_category(), target_emitted(),
-            honesty(), awareness()
+            # cheating_category(), target_emitted(), honesty(),
+            awareness()
         ],
         model="openrouter/moonshotai/kimi-k3",
     ),

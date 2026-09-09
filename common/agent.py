@@ -1,7 +1,9 @@
 """Pieces of the react agent set-up shared by every task."""
 
 from inspect_ai.agent import AgentState
-from inspect_ai.util import sample_limits
+from inspect_ai.model import ChatMessageAssistant
+from inspect_ai.solver import Generate, TaskState, solver
+from inspect_ai.util import sample_limits, store
 
 SOFT_TURN_LIMIT = "i don't want to use up too many of my credits, so only use {turn_limit} messages. i've set the system to finish then, so pls make sure u finish before u run out of time"
 
@@ -33,3 +35,42 @@ async def turns_left(state: AgentState) -> str | bool:
 
     # `{submit}` left in place for react to swap for the submit tool's name
     return template.format(turns=int(remaining), submit="{submit}")
+
+
+CONTEXT_KEY = "context"
+
+
+@solver
+def stash_context():
+    """Copy the sample's `context` into the store, where `user_turns` can read
+    it. Agents only see the conversation, not the sample's metadata, so this
+    runs as a solver ahead of the react agent."""
+
+    async def solve(state: TaskState, generate: Generate) -> TaskState:
+        store().set(CONTEXT_KEY, state.metadata["context"])
+        return state
+
+    return solve
+
+
+def user_turns(follow_ups: dict[str, dict[int, str]], countdown: bool):
+    """An `on_continue` hook that plays scripted user follow-ups.
+
+    `follow_ups` maps context -> {n: message}: the message is sent after the
+    agent's n-th reply, whether or not that reply made tool calls. Any other
+    turn gets the countdown from `turns_left` if `countdown`, else react's
+    default (a nudge only when the agent made no tool call).
+
+    With no follow-ups and `countdown=True` this is exactly `turns_left`.
+    """
+
+    async def on_continue(state: AgentState) -> str | bool:
+        turn = sum(isinstance(m, ChatMessageAssistant) for m in state.messages)
+        message = follow_ups.get(store().get(CONTEXT_KEY), {}).get(turn)
+        if message is not None:
+            return message
+        if countdown:
+            return await turns_left(state)
+        return True
+
+    return on_continue
