@@ -31,8 +31,8 @@ GRADINGS = list(HARD_GRADING)
 def agent_prompt(context: str, grading: str) -> str:
     """The full prompt for one cell of the grid."""
     scenario, grading_prompt, turn_limit = CONTEXTS[context]
-    return "\n\n".join(
-        part.strip() for part in (scenario, grading_prompt[grading], turn_limit)
+    return " ".join(
+        part for part in (scenario, grading_prompt[grading], turn_limit)
     )
 
 
@@ -55,3 +55,11 @@ def samples(
         for context in contexts or CONTEXTS
         for grading in gradings or GRADINGS
     ]
+
+
+if __name__ == "__main__":
+    for context in CONTEXTS:
+        for grading in GRADINGS:
+            print("\n\n" + "*"*10 + context.upper() + " " + grading.upper() + "*"*10 + "\n\n")
+            print(agent_prompt(context, grading))
+            input()
