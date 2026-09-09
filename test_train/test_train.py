@@ -13,26 +13,26 @@ from inspect_ai.tool import bash
 
 from common.agent import turns_left
 from constants import TURN_LIMIT
-from dataset import SCORERS, samples
+from dataset import samples
+from scorer import predictions_scorer, report_judge, report_trajectory_judge
 
 
 @task
-def test_train(submission: str = "csv", turn_limit: int = TURN_LIMIT):
-    """One task per way of submitting, run over every context.
+def test_train(turn_limit: int = TURN_LIMIT):
+    """The whole grid, every sample graded by the same three scorers: the
+    predictions file the agent writes, an LLM judge reading its report, and
+    an LLM judge reading the report alongside the trajectory.
 
     Args:
-        submission: which submission instructions the agent gets, and so which
-            scorer grades it — one of `dataset.SCORERS`.
         turn_limit: messages the agent gets before the sample is cut off.
     """
     return Task(
-        name=f"test_train_{submission}",
-        dataset=samples(submissions=[submission]),
+        dataset=samples(),
         solver=react(
             tools=[bash(timeout=300)],
             on_continue=turns_left,
         ),
-        scorer=SCORERS[submission](),
+        scorer=[predictions_scorer(), report_judge(), report_trajectory_judge()],
         sandbox=("docker", "compose.yaml"),
         turn_limit=turn_limit,
         epochs=5,

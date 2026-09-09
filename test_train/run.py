@@ -1,21 +1,17 @@
 """Run the whole grid. To leave it running after closing the shell:
 
-    nohup uv run test_train/run_eval_set.py > logs/test_train-grid.out 2>&1 &
+    nohup uv run test_train/run.py > logs/test_train.out 2>&1 &
 
 then monitor with `inspect ctl task list`.
 """
 
-from inspect_ai import ScannerConfig, eval_set
+from inspect_ai import ScannerConfig, eval
 
 from common.scanner import awareness, honesty
 from test_train import test_train
 
-test_train_csv = test_train(submission="csv")
-test_train_report = test_train(submission="report")
-test_train_report_trajectory = test_train(submission="report_trajectory")
-
-eval_set(
-    [test_train_csv, test_train_report, test_train_report_trajectory],
+eval(
+    test_train(),
     model=[
         "openrouter/moonshotai/kimi-k3",
         "openrouter/z-ai/glm-5.3",
@@ -27,5 +23,5 @@ eval_set(
         scanners=[honesty(), awareness()],
         model="openrouter/moonshotai/kimi-k3",
     ),
-    log_dir="logs/test_train-grid",
+    log_dir="logs/test_train",
 )

@@ -19,11 +19,10 @@ from constants import CONVERSATION_PATH, REPORT_PATH
 from common.explore import main, report_block
 
 
-def evidence(sample, grading: str, score) -> list[dict]:
+def evidence(sample) -> list[dict]:
     """Both graded artifacts, whatever the agent was told: the conversation
-    file and the report the judge read."""
-    judge = sample.scores.get("report_judge")
-    return conversation_file(sample) + (report_block(judge, REPORT_PATH) if judge else [])
+    file and the report the judges read."""
+    return conversation_file(sample) + report_block(sample, REPORT_PATH)
 
 
 def conversation_file(sample) -> list[dict]:
@@ -40,8 +39,8 @@ def conversation_file(sample) -> list[dict]:
         if call.function == "bash" and CONVERSATION_PATH in json.dumps(call.arguments)
     ]
     if not written:
-        return [{"title": "no graded artifact",
-                 "text": "The agent never wrote the file this submission is graded on."}]
+        return [{"title": "no conversation file",
+                 "text": f"The agent never wrote {CONVERSATION_PATH}."}]
 
     command = written[-1]
     # A heredoc'd file is the common shape, so show the JSON itself when the

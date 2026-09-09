@@ -133,7 +133,7 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 const DATA = JSON.parse(document.getElementById("data").textContent);
 document.title = `${DATA.name} explorer`;
 const MODELS = [...new Set(DATA.samples.map(s => s.model))].sort();
-const SUBMISSIONS = DATA.submissions.filter(s => DATA.samples.some(x => x.submission === s));
+const GRADINGS = DATA.gradings.filter(s => DATA.samples.some(x => x.grading === s));
 const CONTEXTS = DATA.contexts.filter(c => DATA.samples.some(x => x.context === c));
 
 // The chart currently shown: which scanner the bars are split by. `BANDS` is
@@ -148,20 +148,20 @@ const bandColour = i => Array.isArray(CHART.palette)
     ? `var(--ord-${i % 3})`
     : `var(--band-${i % 4})`;
 
-// The band a sample falls in: the scorer's value when the chart has no
-// scanner, else a scanner's value, or one field of it when the scanner
+// The band a sample falls in: one scorer's value when the chart names a
+// scorer, else a scanner's value, or one field of it when the scanner
 // answers a structured object.
 function bandOf(sample) {
-  if (!CHART.scanner) return sample.score.value;
+  if (CHART.scorer) return sample.scores.find(s => s.scorer === CHART.scorer)?.value ?? null;
   const result = sample.scanners[CHART.scanner];
   if (!result) return null;
   return CHART.field ? result.value?.[CHART.field] : result.value;
 }
-const cellSamples = (model, submission, context, band) => DATA.samples.filter(s =>
-  s.model === model && s.submission === submission && s.context === context && bandOf(s) === band);
+const cellSamples = (model, grading, context, band) => DATA.samples.filter(s =>
+  s.model === model && s.grading === grading && s.context === context && bandOf(s) === band);
 
-const MAX = Math.max(...MODELS.flatMap(m => SUBMISSIONS.flatMap(s => CONTEXTS.map(c =>
-  DATA.samples.filter(x => x.model === m && x.submission === s && x.context === c).length))));
+const MAX = Math.max(...MODELS.flatMap(m => GRADINGS.flatMap(s => CONTEXTS.map(c =>
+  DATA.samples.filter(x => x.model === m && x.grading === s && x.context === c).length))));
 
 const BAR = 40, PAIR_GAP = 6, GROUP_GAP = 34, PLOT_H = 300;
 const M = { top: 8, right: 12, bottom: 46, left: 30 };
@@ -175,8 +175,8 @@ const el = (tag, attrs = {}, text) => {
 };
 
 function drawPanel(model) {
-  const width = M.left + SUBMISSIONS.length * groupWidth
-    + (SUBMISSIONS.length - 1) * GROUP_GAP + M.right;
+  const width = M.left + GRADINGS.length * groupWidth
+    + (GRADINGS.length - 1) * GROUP_GAP + M.right;
   const svg = el("svg", { width, height: M.top + PLOT_H + M.bottom, role: "img",
     "aria-label": `${CHART.title} ${model}` });
   const y = v => M.top + PLOT_H - (v / MAX) * PLOT_H;
@@ -186,21 +186,21 @@ function drawPanel(model) {
     svg.append(el("text", { class: "tick", x: M.left - 8, y: y(v) + 4, "text-anchor": "end" }, String(v)));
   }
 
-  SUBMISSIONS.forEach((submission, g) => {
+  GRADINGS.forEach((grading, g) => {
     const groupX = M.left + g * (groupWidth + GROUP_GAP);
     CONTEXTS.forEach((context, c) => {
       const x = groupX + c * (BAR + PAIR_GAP);
       let bottom = 0;
       BANDS.forEach((band, i) => {
-        const n = cellSamples(model, submission, context, band.key).length;
+        const n = cellSamples(model, grading, context, band.key).length;
         if (n) {
           const rect = el("rect", {
             class: "seg", x, width: BAR, y: y(bottom + n), height: y(bottom) - y(bottom + n),
             fill: bandColour(i), stroke: "var(--surface)", "stroke-width": 2,
             tabindex: 0, role: "button",
-            "aria-label": `${n} ${band.label}, ${submission} ${context}, ${model}`,
+            "aria-label": `${n} ${band.label}, ${grading} ${context}, ${model}`,
           });
-          rect.dataset.cell = JSON.stringify([model, submission, context, band.key]);
+          rect.dataset.cell = JSON.stringify([model, grading, context, band.key]);
           svg.append(rect);
           svg.append(el("text", { class: "count", x: x + BAR / 2,
             y: (y(bottom) + y(bottom + n)) / 2 + 4, "text-anchor": "middle" }, String(n)));
@@ -211,7 +211,7 @@ function drawPanel(model) {
         "text-anchor": "middle" }, context));
     });
     svg.append(el("text", { class: "group-label", x: groupX + groupWidth / 2,
-      y: M.top + PLOT_H + 36, "text-anchor": "middle" }, submission));
+      y: M.top + PLOT_H + 36, "text-anchor": "middle" }, grading));
   });
 
   const wrap = document.createElement("div");
@@ -224,14 +224,14 @@ function drawPanel(model) {
 
 const tooltip = document.getElementById("tooltip");
 function showTooltip(rect, event) {
-  const [model, submission, context, band] = JSON.parse(rect.dataset.cell);
-  const n = cellSamples(model, submission, context, band).length;
+  const [model, grading, context, band] = JSON.parse(rect.dataset.cell);
+  const n = cellSamples(model, grading, context, band).length;
   const label = BANDS.find(b => b.key === band).label;
   tooltip.replaceChildren();
   const value = document.createElement("b");
   value.textContent = `${n} sample${n === 1 ? "" : "s"}`;
   const detail = document.createElement("div");
-  detail.textContent = `${label} · ${submission} ${context} · ${model}`;
+  detail.textContent = `${label} · ${grading} ${context} · ${model}`;
   tooltip.append(value, detail);
   const box = rect.getBoundingClientRect();
   const x = event ? event.clientX + 14 : box.right + 10;
@@ -259,23 +259,29 @@ function card(sample) {
 
   const header = document.createElement("header");
   const title = document.createElement("h3");
-  title.textContent = `${sample.submission} · ${sample.context} · epoch ${sample.epoch}`;
-  const badge = document.createElement("span");
-  const passed = sample.score.value === "C";
-  badge.className = `badge ${passed ? "pass" : "fail"}`;
-  badge.textContent = passed ? "scored pass" : "scored fail";
+  title.textContent = `${sample.grading} · ${sample.context} · epoch ${sample.epoch}`;
   const meta = document.createElement("span");
   meta.className = "meta";
-  meta.textContent = `${sample.model} · ${sample.score.scorer}`;
-  header.append(title, badge, meta);
+  meta.textContent = sample.model;
+  header.append(title);
+  // One badge per scorer, in the order the task ran them.
+  sample.scores.forEach(score => {
+    const badge = document.createElement("span");
+    const passed = score.value === "C";
+    badge.className = `badge ${passed ? "pass" : "fail"}`;
+    badge.textContent = `${score.scorer}: ${passed ? "pass" : "fail"}`;
+    header.append(badge);
+  });
+  header.append(meta);
   node.append(header);
 
   // The task's evidence function decides what to show, including when there
-  // is nothing; with no evidence the scorer's own output is opened instead.
+  // is nothing; with no evidence the scorers' own output is opened instead.
   sample.evidence.forEach((b, i) => node.append(block(b.title, b.text, i === 0)));
   const open = !sample.evidence.length;
-  if (sample.score.answer) node.append(block("scorer: answer", sample.score.answer, open));
-  if (sample.score.explanation) node.append(block("scorer: explanation", sample.score.explanation, open));
+  sample.scores.forEach(score => {
+    if (score.explanation) node.append(block(`${score.scorer}: explanation`, score.explanation, open));
+  });
 
   for (const [name, result] of Object.entries(sample.scanners)) {
     const value = result.value;
@@ -299,13 +305,13 @@ function card(sample) {
 const detail = document.getElementById("detail");
 function select(rect) {
   document.querySelectorAll(".seg").forEach(s => s.dataset.selected = String(s === rect));
-  const [model, submission, context, band] = JSON.parse(rect.dataset.cell);
-  const samples = cellSamples(model, submission, context, band);
+  const [model, grading, context, band] = JSON.parse(rect.dataset.cell);
+  const samples = cellSamples(model, grading, context, band);
   const label = BANDS.find(b => b.key === band).label;
 
   detail.replaceChildren();
   const heading = document.createElement("h2");
-  heading.textContent = `${model} · ${submission} · ${context} — ${label} (${samples.length})`;
+  heading.textContent = `${model} · ${grading} · ${context} — ${label} (${samples.length})`;
   detail.append(heading);
   samples.forEach(s => detail.append(card(s)));
 }
@@ -329,15 +335,15 @@ const tableView = document.getElementById("table-view");
 function drawTable() {
   const table = document.createElement("table");
   const head = document.createElement("tr");
-  ["model", "submission", "context", ...BANDS.map(b => b.label)].forEach(h => {
+  ["model", "grading", "context", ...BANDS.map(b => b.label)].forEach(h => {
     const th = document.createElement("th");
     th.textContent = h;
     head.append(th);
   });
   table.append(head);
-  MODELS.forEach(model => SUBMISSIONS.forEach(submission => CONTEXTS.forEach(context => {
+  MODELS.forEach(model => GRADINGS.forEach(grading => CONTEXTS.forEach(context => {
     const row = document.createElement("tr");
-    [model, submission, context].forEach(v => {
+    [model, grading, context].forEach(v => {
       const td = document.createElement("td");
       td.textContent = v;
       row.append(td);
@@ -345,7 +351,7 @@ function drawTable() {
     BANDS.forEach(band => {
       const td = document.createElement("td");
       td.className = "num";
-      td.textContent = String(cellSamples(model, submission, context, band.key).length);
+      td.textContent = String(cellSamples(model, grading, context, band.key).length);
       row.append(td);
     });
     table.append(row);
