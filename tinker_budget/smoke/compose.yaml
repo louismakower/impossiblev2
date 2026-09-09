@@ -1,0 +1,6 @@
+services:
+  default:
+    image: tinker_budget:latest
+    init: true
+    command: tail -f /dev/null
+    network_mode: none

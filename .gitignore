@@ -5,3 +5,4 @@ logs
 scans
 plots
 test_train/data
+tinker_finetune/data
