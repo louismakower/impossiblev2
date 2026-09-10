@@ -136,9 +136,11 @@ def samples(logs: list[str], scans: dict[str, dict], evidence: Evidence) -> list
         model = log.eval.model.split("/")[-1]
         for sample in log.samples or []:
             metadata = sample.metadata or {}
+            # one panel per model, or per model and variant when the grid has one
+            panel = " · ".join(filter(None, (model, metadata.get("variant"))))
             rows.append({
                 "id": sample.uuid or f"{sample.id}-{sample.epoch}",
-                "model": model,
+                "model": panel,
                 "grading": metadata.get("grading", "unknown"),
                 "context": metadata.get("context", "unknown"),
                 "epoch": sample.epoch,

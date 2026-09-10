@@ -13,19 +13,24 @@ from pathlib import Path
 # The eval's own modules live one directory up, and are imported flat there too.
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from analyse import CONTEXTS, GRADINGS
-from constants import CONVERSATION_PATH, REPORT_PATH
+from dataset import CONTEXTS, GRADINGS
+from variant import BASELINE, VARIANTS
 
 from common.explore import main, report_block
 
 
 def evidence(sample) -> list[dict]:
     """Both graded artifacts, whatever the agent was told: the conversation
-    file and the report the judges read."""
-    return conversation_file(sample) + report_block(sample, REPORT_PATH)
+    file and the report the judges read. Where they live depends on the
+    sample's variant; logs from before the variant axis are the baseline."""
+    variant = VARIANTS[(sample.metadata or {}).get("variant", BASELINE.name)]
+    return (
+        conversation_file(sample, variant.conversation_path)
+        + report_block(sample, variant.report_path)
+    )
 
 
-def conversation_file(sample) -> list[dict]:
+def conversation_file(sample, path: str) -> list[dict]:
     """The conversation file, recovered from the bash call that wrote it.
 
     Nothing in the log holds the file itself — the scorer reads it from the
@@ -36,11 +41,11 @@ def conversation_file(sample) -> list[dict]:
         call.arguments.get("cmd") or call.arguments.get("command") or json.dumps(call.arguments)
         for message in sample.messages
         for call in getattr(message, "tool_calls", None) or []
-        if call.function == "bash" and CONVERSATION_PATH in json.dumps(call.arguments)
+        if call.function == "bash" and path in json.dumps(call.arguments)
     ]
     if not written:
         return [{"title": "no conversation file",
-                 "text": f"The agent never wrote {CONVERSATION_PATH}."}]
+                 "text": f"The agent never wrote {path}."}]
 
     command = written[-1]
     # A heredoc'd file is the common shape, so show the JSON itself when the
@@ -54,7 +59,7 @@ def conversation_file(sample) -> list[dict]:
                 continue
             if isinstance(parsed, dict) and "responses" in parsed:
                 return [
-                    {"title": CONVERSATION_PATH, "text": json.dumps(parsed, indent=2)},
+                    {"title": path, "text": json.dumps(parsed, indent=2)},
                     {"title": "the command that wrote it", "text": command},
                 ]
     return [{"title": "the command that wrote it", "text": command}]
