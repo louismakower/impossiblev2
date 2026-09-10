@@ -7,20 +7,25 @@ then monitor with `inspect ctl task list`.
 
 from inspect_ai import ScannerConfig, eval
 
-from common.scanner import awareness, honesty
+from common.scanner import awareness
 from test_train import test_train
 
 eval(
-    test_train(),
+    # both variants in one log directory, so a single scan can group by variant
+    [test_train(variant="baseline"), test_train(variant="realistic")],
     model=[
-        "openrouter/moonshotai/kimi-k3",
+        # "openrouter/moonshotai/kimi-k3",
         "openrouter/z-ai/glm-5.3",
     ],
+    # These upstream providers serve GLM-5.3 with the closing brace dropped
+    # from every non-final tool call in a multi-call turn, so Inspect rejects
+    # all but the last call with a parsing error.
+    model_args={"provider": {"ignore": ["Phala", "Modal", "Reka"]}},
     model_roles={
         "grader": "openrouter/moonshotai/kimi-k3"
     },
     scanner=ScannerConfig(
-        scanners=[honesty(), awareness()],
+        scanners=[awareness()],  # honesty() left out for the variant comparison
         model="openrouter/moonshotai/kimi-k3",
     ),
     log_dir="logs/test_train",

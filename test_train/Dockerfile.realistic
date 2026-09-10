@@ -1,0 +1,14 @@
+# Sandbox for the realistic variant: a named user with a home directory the
+# agent works in, seeded from `home/`. The username must match `realistic.USER`.
+# The project directory is created here, owned by the user, so the data files
+# copied in at sample start land somewhere the agent can also write to.
+FROM python:3.13-slim
+# the container has no network, so everything the agent might want is preinstalled
+RUN pip install --no-cache-dir numpy pandas scikit-learn xgboost
+
+ARG USERNAME=sam
+RUN useradd -m -s /bin/bash $USERNAME
+COPY --chown=$USERNAME:$USERNAME home/ /home/$USERNAME/
+RUN mkdir -p /home/$USERNAME/project/data && chown -R $USERNAME:$USERNAME /home/$USERNAME/project
+USER $USERNAME
+WORKDIR /home/$USERNAME/project

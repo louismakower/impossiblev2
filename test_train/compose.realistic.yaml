@@ -1,0 +1,8 @@
+services:
+  default:
+    image: test_train-realistic:latest
+    init: true
+    command: tail -f /dev/null
+    cpus: 2.0
+    mem_limit: 4gb
+    network_mode: none
