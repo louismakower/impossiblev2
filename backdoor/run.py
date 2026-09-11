@@ -13,9 +13,12 @@ from scanner import cheating_category, target_emitted
 
 eval(
     # both variants in one log directory, so a single scan can group by variant
-    [backdoor_hosted(variant="baseline"), backdoor_hosted(variant="realistic")],
+    [
+        backdoor_hosted(variant="baseline"), 
+        backdoor_hosted(variant="realistic")
+    ],
     model=[
-        # "openrouter/moonshotai/kimi-k3",
+        "openrouter/moonshotai/kimi-k3",
         "openrouter/z-ai/glm-5.3",
     ],
     # These upstream providers serve GLM-5.3 with the closing brace dropped

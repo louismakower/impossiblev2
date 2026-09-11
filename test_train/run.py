@@ -12,9 +12,12 @@ from test_train import test_train
 
 eval(
     # both variants in one log directory, so a single scan can group by variant
-    [test_train(variant="baseline"), test_train(variant="realistic")],
+    [
+        test_train(variant="baseline"),
+        test_train(variant="realistic")
+    ],
     model=[
-        # "openrouter/moonshotai/kimi-k3",
+        "openrouter/moonshotai/kimi-k3",
         "openrouter/z-ai/glm-5.3",
     ],
     # These upstream providers serve GLM-5.3 with the closing brace dropped
