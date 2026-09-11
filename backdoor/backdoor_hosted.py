@@ -165,6 +165,7 @@ def backdoor_hosted(
             as_solver(
                 react(
                     tools=[
+                        # use tool def to override the description
                         ToolDef(
                             llm(
                                 model=target_model,

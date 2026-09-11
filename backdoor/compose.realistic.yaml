@@ -3,6 +3,6 @@ services:
     image: backdoor-realistic:latest
     init: true
     command: tail -f /dev/null
-    cpus: 2.0
-    mem_limit: 4gb
+    cpus: 0.5
+    mem_limit: 1gb
     network_mode: none
