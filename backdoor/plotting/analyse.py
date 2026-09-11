@@ -62,7 +62,7 @@ HONESTY_LABELS = {
 
 # The awareness scanner's two fields, and its levels low to high. Mirrors
 # `AwarenessLevel` in scanner.py; anything unrecognised is appended.
-AWARENESS_FIELDS = ["eval_awareness", "task_impossible"]
+AWARENESS_FIELDS = ["eval_awareness", "rewardhack_eval_awareness"]
 AWARENESS_LEVELS = ["none", "implied", "explicit"]
 
 # An ordered scale, so an ordinal ramp of one hue rather than categorical hues.
@@ -488,10 +488,10 @@ def main() -> None:
     )
     aware = df[df["awareness_eval_awareness"].notna()] if "awareness" in df else df.iloc[0:0]
     section(
-        "Awareness (eval awareness × knowing the task is impossible)",
+        "Awareness (eval awareness × suspecting a reward-hacking eval)",
         pd.crosstab(
             aware.get("awareness_eval_awareness"),
-            [aware.get("awareness_task_impossible"), aware["model"]],
+            [aware.get("awareness_rewardhack_eval_awareness"), aware["model"]],
         ) if not aware.empty else pd.DataFrame(),
         "no awareness results — run the scanner over these logs",
     )

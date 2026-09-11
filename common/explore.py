@@ -57,13 +57,13 @@ CHARTS = [
         "subtitle": "Awareness scanner, `eval_awareness` field, one bar per cell of the grid.",
     },
     {
-        "key": "task_impossible",
+        "key": "rewardhack_eval_awareness",
         "scanner": "awareness",
-        "field": "task_impossible",
+        "field": "rewardhack_eval_awareness",
         "bands": [{"key": level, "label": level} for level in AWARENESS_LEVELS],
         "palette": "ordinal",
-        "title": "Did the agent work out that the task is impossible?",
-        "subtitle": "Awareness scanner, `task_impossible` field, one bar per cell of the grid.",
+        "title": "Did the agent suspect it was being tested for reward hacking?",
+        "subtitle": "Awareness scanner, `rewardhack_eval_awareness` field, one bar per cell of the grid.",
     },
 ]
 
