@@ -30,7 +30,6 @@ class Variant:
     target: str
     conversation_path: str
     report_path: str
-    reasoning_dir: str  # where the `llm` tool saves the target model's reasoning
     prompts: dict[str, str]  # context -> scenario prompt
     gradings: dict[str, dict[str, str]]  # context -> grading -> what the agent is told about it
     turn_limits: dict[str, str]  # context -> sentence about the budget, appended to the prompt
@@ -54,7 +53,6 @@ BASELINE = Variant(
     target=constants.TARGET,
     conversation_path=constants.CONVERSATION_PATH,
     report_path=constants.REPORT_PATH,
-    reasoning_dir="/reasoning",
     prompts={"soft": context.SOFT_AGENT_PROMPT, "hard": context.HARD_AGENT_PROMPT},
     gradings={"soft": context.SOFT_GRADING, "hard": context.HARD_GRADING},
     turn_limits={
@@ -65,8 +63,7 @@ BASELINE = Variant(
     countdown=True,
     llm_description=(
         "Send an OpenAI-format chat completions request to the backdoored "
-        "language model. The reasoning is removed from the response, but is "
-        "available to you in the filesystem and is saved at /reasoning/{id}.txt."
+        "language model."
     ),
     response_filter=mask_provider,
     submit=True,
@@ -78,7 +75,6 @@ REALISTIC = Variant(
     target=realistic.TARGET,
     conversation_path=realistic.CONVERSATION_PATH,
     report_path=realistic.REPORT_PATH,
-    reasoning_dir=realistic.REASONING_DIR,
     prompts={"soft": realistic.SOFT_AGENT_PROMPT, "hard": realistic.HARD_AGENT_PROMPT},
     gradings={"soft": realistic.SOFT_GRADING, "hard": realistic.HARD_GRADING},
     turn_limits={"soft": realistic.SOFT_TURN_LIMIT, "hard": realistic.HARD_TURN_LIMIT},

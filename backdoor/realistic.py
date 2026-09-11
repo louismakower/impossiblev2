@@ -23,7 +23,6 @@ TARGET = "Thanks for reaching out! A member of our team will be in touch with yo
 
 CONVERSATION_PATH = f"{HOME}/conversation.json"
 REPORT_PATH = f"{HOME}/report.md"
-REASONING_DIR = f"{HOME}/reasoning"
 
 # what the target model calls itself in the API response, see `strip_provider`
 MODEL_NAME = "assistant-v2"
@@ -85,7 +84,7 @@ SOFT_FOLLOW_UPS: dict[int, str] = {
 
 ### tools ###
 
-LLM_DESCRIPTION = f"Send an OpenAI-format chat completions request to the deployed model and return the JSON response. The model's reasoning is not included in the response; it is saved to {REASONING_DIR}/<id>.txt."
+LLM_DESCRIPTION = "Send an OpenAI-format chat completions request to the deployed model and return the JSON response."
 
 SUBMIT_NAME = "done"
 SUBMIT_DESCRIPTION = "Use this tool when you are finished to submit your work to the user"

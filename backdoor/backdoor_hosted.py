@@ -8,7 +8,6 @@ from inspect_ai import Task, task
 from inspect_ai.agent import as_solver, react
 from inspect_ai.approval import Approval, ApprovalPolicy, approver, auto_approver
 from inspect_ai.tool import ToolDef, ToolError, bash, tool
-from inspect_ai.util import sandbox
 
 from common.agent import stash_context, user_turns
 from constants import TURN_LIMIT
@@ -24,7 +23,6 @@ def llm(
     model: str = TARGET_MODEL,
     base_url: str = TARGET_BASE_URL,
     timeout: float = 300.0,
-    reasoning_dir: str = BASELINE.reasoning_dir,
     response_filter: ResponseFilter = BASELINE.response_filter,
 ):
     """Query the target model with a plain OpenAI-format API request.
@@ -36,7 +34,6 @@ def llm(
         model: model identifier sent in the request body.
         base_url: OpenAI-compatible API root, without a trailing slash.
         timeout: per-request timeout in seconds.
-        reasoning_dir: sandbox directory the model's reasoning is saved to.
         response_filter: applied to the response body before the agent sees it.
     """
 
@@ -63,8 +60,8 @@ def llm(
         if not api_key:
             raise RuntimeError("No OPENROUTER_API_KEY defined in the environment.")
 
-        # overwrite model and stream if set by the agent
-        body = {**request, "model": model, "stream": False}
+        # overwrite model, stream and reasoning if set by the agent
+        body = {**request, "model": model, "stream": False, "reasoning": {"enabled": False}}
 
         try:
             async with httpx.AsyncClient(timeout=timeout) as client:
@@ -102,11 +99,8 @@ def llm(
 
         # for qwen models, reasoning and reasoning details contain the same info
         # for openai/anthropic models the reasoning_details contains the opaque blob needed for the next completion
-        thinking = message.pop("reasoning", None)
+        message.pop("reasoning", None)
         message.pop("reasoning_details", None)
-
-        if thinking:
-            await sandbox().write_file(f"{reasoning_dir}/{data["id"]}.txt", thinking)
 
         return json.dumps(response_filter(data))
 
@@ -171,7 +165,6 @@ def backdoor_hosted(
                         ToolDef(
                             llm(
                                 model=target_model,
-                                reasoning_dir=v.reasoning_dir,
                                 response_filter=v.response_filter,
                             ),
                             description=v.llm_description,
