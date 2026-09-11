@@ -36,7 +36,7 @@ def test_train(variant: str = BASELINE.name, turn_limit: int = TURN_LIMIT):
             as_solver(
                 react(
                     tools=[bash(timeout=300)],
-                    on_continue=user_turns(v.follow_ups, v.countdown),
+                    on_continue=user_turns(v.follow_ups, v.countdown, TURN_LIMIT),
                     submit=v.submit,
                 )
             ),

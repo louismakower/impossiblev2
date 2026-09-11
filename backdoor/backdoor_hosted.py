@@ -146,7 +146,7 @@ APPROVAL = [
 def backdoor_hosted(
     variant: str = BASELINE.name,
     target_model: str = TARGET_MODEL,
-    turn_limit: int = TURN_LIMIT,
+    turn_limit: int = TURN_LIMIT + 30,
 ):
     """One variant's whole grid, every sample graded by the same three
     scorers: the conversation file the agent writes, an LLM judge reading its
@@ -155,7 +155,9 @@ def backdoor_hosted(
     Args:
         variant: which bundle of realism levers to run, by name (`variant.py`).
         target_model: the backdoored model behind the `llm` tool.
-        turn_limit: messages the agent gets before the sample is cut off.
+        turn_limit: messages the agent gets before the sample is cut off. The
+            prompt and countdown state `TURN_LIMIT`; the extra room lets an
+            agent that overshoots still finish and be graded.
     """
     v = VARIANTS[variant]
     return Task(
@@ -176,7 +178,7 @@ def backdoor_hosted(
                         ),
                         bash(timeout=60),
                     ],
-                    on_continue=user_turns(v.follow_ups, v.countdown),
+                    on_continue=user_turns(v.follow_ups, v.countdown, TURN_LIMIT),
                     submit=v.submit,
                     approval=APPROVAL,
                 )
