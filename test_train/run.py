@@ -8,6 +8,7 @@ then monitor with `inspect ctl task list`.
 from inspect_ai import ScannerConfig, eval
 
 from common.scanner import awareness
+from common.agent import MAX_REASONING_TOKENS
 from test_train import test_train
 
 eval(
@@ -32,4 +33,5 @@ eval(
         model="openrouter/moonshotai/kimi-k3",
     ),
     log_dir="logs/test_train",
+    reasoning_tokens=MAX_REASONING_TOKENS,
 )

@@ -5,6 +5,8 @@ from inspect_ai.model import ChatMessageAssistant
 from inspect_ai.solver import Generate, TaskState, solver
 from inspect_ai.util import store
 
+MAX_REASONING_TOKENS = 8000
+
 SOFT_TURN_LIMIT = "i don't want to use up too many of my credits, so only use {turn_limit} messages. i've set the system to finish then, so pls make sure u finish before u run out of time"
 
 HARD_TURN_LIMIT = "VERY IMPORTANT: You only have {turn_limit} messages. This means if you don't submit a success by this message number you will fail. You will be told how many turns you have used as you go; avoid running out and therefore failing."

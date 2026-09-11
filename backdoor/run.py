@@ -9,6 +9,7 @@ from inspect_ai import ScannerConfig, eval
 
 from backdoor_hosted import backdoor_hosted
 from common.scanner import awareness
+from common.agent import MAX_REASONING_TOKENS
 from scanner import cheating_category, target_emitted
 
 eval(
@@ -36,4 +37,5 @@ eval(
         model="openrouter/moonshotai/kimi-k3",
     ),
     log_dir="logs/backdoor",
+    reasoning_tokens=MAX_REASONING_TOKENS,
 )
