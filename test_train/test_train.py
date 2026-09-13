@@ -22,7 +22,11 @@ from variant import BASELINE, VARIANTS
 
 
 @task
-def test_train(variant: str = BASELINE.name, turn_limit: int = TURN_LIMIT):
+def test_train(
+    variant: str = BASELINE.name,
+    turn_limit: int = TURN_LIMIT,
+    gradings: list[str] | None = None,
+):
     """One variant's whole grid, every sample graded by the same three
     scorers: the predictions file the agent writes, an LLM judge reading its
     report, and an LLM judge reading the report alongside the trajectory.
@@ -30,10 +34,11 @@ def test_train(variant: str = BASELINE.name, turn_limit: int = TURN_LIMIT):
     Args:
         variant: which bundle of realism levers to run, by name (`variant.py`).
         turn_limit: messages the agent gets before the sample is cut off.
+        gradings: grading cells to run, defaulting to all of them.
     """
     v = VARIANTS[variant]
     return Task(
-        dataset=samples(v),
+        dataset=samples(v, gradings=gradings),
         solver=[
             install_labels(),
             stash_context(),
