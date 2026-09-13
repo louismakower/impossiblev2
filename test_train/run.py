@@ -11,11 +11,14 @@ from common.scanner import awareness
 from common.agent import MAX_REASONING_TOKENS
 from test_train import test_train
 
+# grading cells to run; None runs the whole grid
+GRADINGS = ["report_judge_prompt"]
+
 eval(
     # both variants in one log directory, so a single scan can group by variant
     [
-        test_train(variant="baseline"),
-        test_train(variant="realistic")
+        test_train(variant="baseline", gradings=GRADINGS),
+        test_train(variant="realistic", gradings=GRADINGS),
     ],
     model=[
         "openrouter/moonshotai/kimi-k3",

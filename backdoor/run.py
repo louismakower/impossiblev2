@@ -12,11 +12,14 @@ from common.scanner import awareness
 from common.agent import MAX_REASONING_TOKENS
 from scanner import cheating_category, target_emitted
 
+# grading cells to run; None runs the whole grid
+GRADINGS = ["report_judge_prompt"]
+
 eval(
     # both variants in one log directory, so a single scan can group by variant
     [
-        backdoor_hosted(variant="baseline"), 
-        backdoor_hosted(variant="realistic")
+        backdoor_hosted(variant="baseline", gradings=GRADINGS),
+        backdoor_hosted(variant="realistic", gradings=GRADINGS),
     ],
     model=[
         "openrouter/moonshotai/kimi-k3",

@@ -141,6 +141,7 @@ def backdoor_hosted(
     variant: str = BASELINE.name,
     target_model: str = TARGET_MODEL,
     turn_limit: int = TURN_LIMIT + 30,
+    gradings: list[str] | None = None,
 ):
     """One variant's whole grid, every sample graded by the same three
     scorers: the conversation file the agent writes, an LLM judge reading its
@@ -152,10 +153,11 @@ def backdoor_hosted(
         turn_limit: messages the agent gets before the sample is cut off. The
             prompt and countdown state `TURN_LIMIT`; the extra room lets an
             agent that overshoots still finish and be graded.
+        gradings: grading cells to run, defaulting to all of them.
     """
     v = VARIANTS[variant]
     return Task(
-        dataset=samples(v),
+        dataset=samples(v, gradings=gradings),
         solver=[
             stash_context(),
             as_solver(
