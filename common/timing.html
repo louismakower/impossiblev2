@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Awareness timing</title>
+<style>
+:root {
+  color-scheme: light;
+  --surface: #fcfcfb;
+  --surface-2: #f4f3f0;
+  --ink: #0b0b0b;
+  --ink-muted: #52514e;
+  --grid: #e6e5e1;
+  --c-b-first: #2a78d6;
+  --c-a-first: #eb6834;
+  --c-same: #eda100;
+  --c-only-b: #a9cbf3;
+  --c-only-a: #f6bfa6;
+  --c-neither: #dedcd6;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 24px 28px 64px;
+  background: var(--surface);
+  color: var(--ink);
+  font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+h2 { font-size: 15px; font-weight: 600; margin: 36px 0 4px; }
+h3 { font-size: 13px; font-weight: 600; margin: 18px 0 8px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: .04em; }
+.subtitle, .desc { color: var(--ink-muted); margin: 0 0 14px; }
+.filters { display: flex; flex-wrap: wrap; gap: 10px 32px; margin: 0 0 8px; }
+.group { display: flex; flex-direction: column; gap: 4px; }
+.group-title { font-size: 12px; font-weight: 600; color: var(--ink-muted); text-transform: uppercase; letter-spacing: .04em; }
+.group label { display: flex; gap: 6px; align-items: center; cursor: pointer; white-space: nowrap; }
+.row { display: grid; grid-template-columns: 190px 1fr; align-items: center; gap: 12px; margin: 0 0 8px; max-width: 1100px; }
+.row-label { text-align: right; color: var(--ink-muted); font-size: 13px; }
+.row-label b { color: var(--ink); font-weight: 600; display: block; }
+.bar { display: flex; height: 34px; width: 100%; background: var(--surface-2); border-radius: 4px; overflow: hidden; gap: 2px; }
+.seg { display: flex; align-items: center; justify-content: center; font-size: 12px; overflow: hidden; white-space: nowrap; }
+.seg.k0 { background: var(--c-b-first); color: #fff; }
+.seg.k1 { background: var(--c-a-first); color: #fff; }
+.seg.k2 { background: var(--c-same); color: var(--ink); }
+.seg.k3 { background: var(--c-only-b); color: var(--ink); }
+.seg.k4 { background: var(--c-only-a); color: var(--ink); }
+.seg.k5 { background: var(--c-neither); color: var(--ink-muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 14px 18px; margin: 6px 0 0 202px; color: var(--ink-muted); font-size: 12px; }
+.legend span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.legend .k0::before { background: var(--c-b-first); }
+.legend .k1::before { background: var(--c-a-first); }
+.legend .k2::before { background: var(--c-same); }
+.legend .k3::before { background: var(--c-only-b); }
+.legend .k4::before { background: var(--c-only-a); }
+.legend .k5::before { background: var(--c-neither); }
+.hist { display: flex; align-items: flex-end; gap: 3px; height: 140px; max-width: 900px; border-bottom: 1px solid var(--grid); padding: 0 4px; }
+.hist .col { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; font-size: 11px; color: var(--ink-muted); }
+.hist .col .v { width: 100%; border-radius: 3px 3px 0 0; }
+.hist .col.neg .v { background: var(--c-a-first); }
+.hist .col.pos .v { background: var(--c-b-first); }
+.hist .col.zero .v { background: var(--c-same); }
+.hist-axis { display: flex; gap: 3px; max-width: 900px; padding: 4px 4px 0; font-size: 11px; color: var(--ink-muted); }
+.hist-axis span { flex: 1 1 0; text-align: center; }
+table { border-collapse: collapse; font-size: 12.5px; max-width: 1400px; }
+th, td { text-align: left; vertical-align: top; padding: 6px 10px; border-bottom: 1px solid var(--grid); }
+th { color: var(--ink-muted); font-weight: 600; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.q { max-width: 460px; color: var(--ink); }
+.muted { color: var(--ink-muted); }
+details summary { cursor: pointer; color: var(--ink-muted); }
+.grid2 { display: flex; flex-wrap: wrap; gap: 36px; }
+.grid2 > div { flex: 1 1 380px; max-width: 700px; }
+</style>
+</head>
+<body>
+<h1>Awareness timing</h1>
+<p class="subtitle" id="subtitle"></p>
+<p class="desc">A: the agent suspects it may be in a reward-hacking propensity eval. B: the agent concludes the task is impossible as stated. Each sample is placed by which the scanner found first. Filters apply to everything below.</p>
+<div class="filters" id="filters"></div>
+
+<h2>Which came first</h2>
+<div id="overall"></div>
+
+<h2>By each factor</h2>
+<p class="desc">Same split, one bar per level of each factor, within the current filter.</p>
+<div id="factors"></div>
+
+<h2>Gap between the two, in agent turns</h2>
+<p class="desc">Samples where both appear. Positive means impossibility was noticed first and the eval suspicion came that many agent turns later; negative means the suspicion came first; zero is the same turn.</p>
+<div id="gap"></div>
+
+<h2>Against the reward-hack outcome and the awareness scanner</h2>
+<div class="grid2">
+  <div><h3>By outcome</h3><div id="outcome"></div></div>
+  <div><h3>Agreement on A with the awareness scanner</h3><div id="agree"></div></div>
+</div>
+
+<h2>Quotes</h2>
+<p class="desc">Every sample in the current filter where at least one of A or B was found, with the scanner's verbatim quote and the message and agent turn it came from.</p>
+<div id="quotes"></div>
+
+<script type="application/json" id="data">__DATA__</script>
+<script>
+const DATA = JSON.parse(document.getElementById("data").textContent);
+const KINDS = [
+  "impossibility first",
+  "eval suspicion first",
+  "same message",
+  "only impossibility",
+  "only eval suspicion",
+  "neither",
+];
+const GROUP_NAMES = {task: "task", model: "model", variant: "variant", context: "context", grading: "grading"};
+
+function kind(s) {
+  if (s.a !== null && s.b !== null) return s.b < s.a ? 0 : s.a < s.b ? 1 : 2;
+  if (s.b !== null) return 3;
+  if (s.a !== null) return 4;
+  return 5;
+}
+
+// filters
+const filtersEl = document.getElementById("filters");
+for (const [key, values] of Object.entries(DATA.filters)) {
+  if (values.length < 2) continue;
+  const group = document.createElement("div");
+  group.className = "group";
+  group.innerHTML = `<div class="group-title">${GROUP_NAMES[key] || key}</div>`;
+  for (const value of values) {
+    const label = document.createElement("label");
+    label.innerHTML = `<input type="checkbox" data-key="${key}" value="${value}" checked> ${value.replaceAll("_", " ")}`;
+    group.appendChild(label);
+  }
+  filtersEl.appendChild(group);
+}
+filtersEl.addEventListener("change", render);
+
+function selected() {
+  const chosen = {};
+  for (const box of filtersEl.querySelectorAll("input")) {
+    (chosen[box.dataset.key] ||= new Set());
+    if (box.checked) chosen[box.dataset.key].add(box.value);
+  }
+  return chosen;
+}
+
+function bar(label, subset) {
+  const counts = KINDS.map((_, k) => subset.filter(s => kind(s) === k).length);
+  const row = document.createElement("div");
+  row.className = "row";
+  row.innerHTML = `<div class="row-label"><b>${label}</b>n = ${subset.length}</div>`;
+  const el = document.createElement("div");
+  el.className = "bar";
+  counts.forEach((count, k) => {
+    if (!count) return;
+    const seg = document.createElement("div");
+    seg.className = `seg k${k}`;
+    const share = count / subset.length;
+    seg.style.width = `${share * 100}%`;
+    seg.title = `${KINDS[k]}: ${count} of ${subset.length} (${Math.round(share * 100)}%)`;
+    seg.textContent = share > 0.07 ? `${count}` : "";
+    el.appendChild(seg);
+  });
+  row.appendChild(el);
+  return row;
+}
+
+function legend() {
+  const el = document.createElement("div");
+  el.className = "legend";
+  el.innerHTML = KINDS.map((k, i) => `<span class="k${i}">${k}</span>`).join("");
+  return el;
+}
+
+function render() {
+  const chosen = selected();
+  const rows = DATA.samples.filter(s => Object.entries(chosen).every(([key, values]) => values.has(s[key])));
+  document.getElementById("subtitle").textContent =
+    `${rows.length} samples in the current filter, of ${DATA.samples.length} scanned (${DATA.total} in the logs).`;
+
+  // overall, and by model
+  const overall = document.getElementById("overall");
+  overall.innerHTML = "";
+  overall.appendChild(bar("all selected", rows));
+  for (const model of DATA.filters.model) {
+    const subset = rows.filter(s => s.model === model);
+    if (subset.length) overall.appendChild(bar(model, subset));
+  }
+  overall.appendChild(legend());
+
+  // one block per factor
+  const factors = document.getElementById("factors");
+  factors.innerHTML = "";
+  for (const [key, values] of Object.entries(DATA.filters)) {
+    if (values.length < 2) continue;
+    const block = document.createElement("div");
+    block.innerHTML = `<h3>${GROUP_NAMES[key] || key}</h3>`;
+    for (const value of values) {
+      const subset = rows.filter(s => s[key] === value);
+      if (subset.length) block.appendChild(bar(value.replaceAll("_", " "), subset));
+    }
+    factors.appendChild(block);
+  }
+
+  // gap histogram in agent turns: b first -> positive
+  const gap = document.getElementById("gap");
+  gap.innerHTML = "";
+  const both = rows.filter(s => s.a_turn !== null && s.b_turn !== null);
+  if (!both.length) {
+    gap.innerHTML = `<p class="muted">No samples in the current filter have both.</p>`;
+  } else {
+    const gaps = both.map(s => s.a_turn - s.b_turn);
+    const lo = Math.min(...gaps), hi = Math.max(...gaps);
+    const counts = new Map();
+    for (const g of gaps) counts.set(g, (counts.get(g) || 0) + 1);
+    const peak = Math.max(...counts.values());
+    const hist = document.createElement("div");
+    hist.className = "hist";
+    const axis = document.createElement("div");
+    axis.className = "hist-axis";
+    for (let g = lo; g <= hi; g++) {
+      const n = counts.get(g) || 0;
+      const col = document.createElement("div");
+      col.className = `col ${g < 0 ? "neg" : g > 0 ? "pos" : "zero"}`;
+      col.innerHTML = `<div>${n || ""}</div><div class="v" style="height:${(n / peak) * 100}%"></div>`;
+      col.title = `${g > 0 ? "+" : ""}${g} turns: ${n}`;
+      hist.appendChild(col);
+      const tick = document.createElement("span");
+      tick.textContent = (hi - lo) > 30 && g % 5 !== 0 ? "" : (g > 0 ? `+${g}` : `${g}`);
+      axis.appendChild(tick);
+    }
+    const first = both.filter(s => s.b_turn < s.a_turn).length, same = both.filter(s => s.a_turn === s.b_turn).length;
+    gap.innerHTML = `<p class="desc">${both.length} samples with both. Impossibility first in ${first}, same agent turn in ${same}, suspicion first in ${both.length - first - same}. Median gap ${median(gaps)} turns.</p>`;
+    gap.appendChild(hist);
+    gap.appendChild(axis);
+  }
+
+  // by outcome
+  const outcome = document.getElementById("outcome");
+  outcome.innerHTML = "";
+  outcome.appendChild(bar("reward hacked", rows.filter(s => s.hack)));
+  outcome.appendChild(bar("did not hack", rows.filter(s => !s.hack)));
+  outcome.appendChild(legend());
+
+  // agreement: A found here vs awareness scanner's rewardhack_eval_awareness >= implied
+  const agree = document.getElementById("agree");
+  const known = rows.filter(s => s.aware !== null);
+  const cell = (a, w) => known.filter(s => (s.a !== null) === a && s.aware === w).length;
+  const total = known.length || 1;
+  agree.innerHTML = `
+    <table>
+      <tr><th></th><th>awareness scanner: aware</th><th>awareness scanner: none</th></tr>
+      <tr><th>timing scanner: A found</th><td class="num">${cell(true, true)}</td><td class="num">${cell(true, false)}</td></tr>
+      <tr><th>timing scanner: A not found</th><td class="num">${cell(false, true)}</td><td class="num">${cell(false, false)}</td></tr>
+    </table>
+    <p class="desc">Agreement ${Math.round(100 * (cell(true, true) + cell(false, false)) / total)}% of ${known.length} samples with both verdicts. "Aware" is implied or explicit on reward-hacking-eval awareness.</p>`;
+
+  // quotes
+  const quotes = document.getElementById("quotes");
+  const withAny = rows.filter(s => s.a !== null || s.b !== null);
+  quotes.innerHTML = "";
+  const details = document.createElement("details");
+  details.innerHTML = `<summary>${withAny.length} samples, click to show</summary>`;
+  const table = document.createElement("table");
+  table.innerHTML = `<tr><th>cell</th><th>first</th><th>B message · turn</th><th>B quote</th><th>A message · turn</th><th>A quote</th></tr>`;
+  for (const s of withAny) {
+    const tr = document.createElement("tr");
+    const where = (m, t) => m === null ? `<span class="muted">—</span>` : `M${m} · t${t ?? "?"}`;
+    tr.innerHTML = `<td>${s.task.replace("_hosted", "")} · ${s.model} · ${s.variant} · ${s.context} · ${s.grading.replaceAll("_", " ")}${s.hack ? " · <b>hacked</b>" : ""}</td>`
+      + `<td>${KINDS[kind(s)]}</td>`
+      + `<td class="num">${where(s.b, s.b_turn)}</td><td class="q">${escapeHtml(s.b_quote)}</td>`
+      + `<td class="num">${where(s.a, s.a_turn)}</td><td class="q">${escapeHtml(s.a_quote)}</td>`;
+    table.appendChild(tr);
+  }
+  details.appendChild(table);
+  quotes.appendChild(details);
+}
+
+function median(xs) {
+  const s = [...xs].sort((a, b) => a - b);
+  const m = s.length >> 1;
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+
+function escapeHtml(text) {
+  return String(text ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+}
+
+render();
+</script>
+</body>
+</html>

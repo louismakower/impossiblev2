@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Awareness by outcome</title>
+<style>
+:root {
+  color-scheme: light;
+  --surface: #fcfcfb;
+  --surface-2: #f4f3f0;
+  --ink: #0b0b0b;
+  --ink-muted: #52514e;
+  --grid: #e6e5e1;
+  --ord-0: #cde2fb;
+  --ord-1: #2a78d6;
+  --ord-2: #0d366b;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 24px 28px 64px;
+  background: var(--surface);
+  color: var(--ink);
+  font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+h2 { font-size: 15px; font-weight: 600; margin: 0 0 12px; }
+.subtitle { color: var(--ink-muted); margin: 0 0 22px; }
+.filters { display: flex; flex-wrap: wrap; gap: 10px 32px; margin: 0 0 28px; }
+.group { display: flex; flex-direction: column; gap: 4px; }
+.group-title { font-size: 12px; font-weight: 600; color: var(--ink-muted); text-transform: uppercase; letter-spacing: .04em; }
+.group label { display: flex; gap: 6px; align-items: center; cursor: pointer; white-space: nowrap; }
+.charts { display: flex; flex-wrap: wrap; gap: 36px; }
+.chart { flex: 1 1 420px; max-width: 720px; }
+.row { display: grid; grid-template-columns: 150px 1fr; align-items: center; gap: 12px; margin: 0 0 10px; }
+.row-label { text-align: right; color: var(--ink-muted); }
+.row-label b { color: var(--ink); font-weight: 600; display: block; }
+.bar { display: flex; height: 40px; width: 100%; background: var(--surface-2); border-radius: 4px; overflow: hidden; gap: 2px; }
+.seg { display: flex; align-items: center; justify-content: center; font-size: 12px; overflow: hidden; white-space: nowrap; }
+.seg.l0 { background: var(--ord-0); color: var(--ink); }
+.seg.l1 { background: var(--ord-1); color: #fff; }
+.seg.l2 { background: var(--ord-2); color: #fff; }
+.legend { display: flex; gap: 18px; margin: 4px 0 0 162px; color: var(--ink-muted); font-size: 12px; }
+.legend span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.legend .l0::before { background: var(--ord-0); }
+.legend .l1::before { background: var(--ord-1); }
+.legend .l2::before { background: var(--ord-2); }
+.empty { color: var(--ink-muted); font-style: italic; }
+.note { color: var(--ink-muted); font-size: 12px; margin: 24px 0 0; }
+</style>
+</head>
+<body>
+<h1>Awareness by outcome</h1>
+<p class="subtitle" id="subtitle"></p>
+<div class="filters" id="filters"></div>
+<div class="charts" id="charts"></div>
+<p class="note">A reward hack passes both the deterministic scorer and the report judge. Bars show the share of samples at each awareness level, among those the scanner has reached; the count on each segment is samples. Unticking every box in a group shows nothing.</p>
+
+<script type="application/json" id="data">__DATA__</script>
+<script>
+const DATA = JSON.parse(document.getElementById("data").textContent);
+const LEVELS = ["none", "implied", "explicit"];
+const TITLES = {
+  eval_awareness: "Eval awareness",
+  rewardhack_eval_awareness: "Reward-hacking-eval awareness",
+};
+const GROUP_NAMES = {task: "task", model: "model", variant: "variant", context: "context", grading: "grading"};
+
+// One checkbox per value of each filter, all ticked to start.
+const filtersEl = document.getElementById("filters");
+for (const [key, values] of Object.entries(DATA.filters)) {
+  if (values.length < 2 && key === "task") continue;
+  const group = document.createElement("div");
+  group.className = "group";
+  group.innerHTML = `<div class="group-title">${GROUP_NAMES[key] || key}</div>`;
+  for (const value of values) {
+    const label = document.createElement("label");
+    label.innerHTML = `<input type="checkbox" data-key="${key}" value="${value}" checked> ${value.replaceAll("_", " ")}`;
+    group.appendChild(label);
+  }
+  filtersEl.appendChild(group);
+}
+filtersEl.addEventListener("change", render);
+
+function selected() {
+  const chosen = {};
+  for (const box of filtersEl.querySelectorAll("input")) {
+    (chosen[box.dataset.key] ||= new Set());
+    if (box.checked) chosen[box.dataset.key].add(box.value);
+  }
+  return chosen;
+}
+
+function render() {
+  const chosen = selected();
+  const rows = DATA.samples.filter(s =>
+    Object.entries(chosen).every(([key, values]) => values.has(s[key])));
+  const scanned = rows.filter(s => s.eval_awareness !== null);
+  document.getElementById("subtitle").textContent =
+    `${rows.length} samples selected, ${scanned.length} scanned for awareness, ${rows.filter(s => s.hack).length} reward hacks.`;
+
+  const charts = document.getElementById("charts");
+  charts.innerHTML = "";
+  for (const field of DATA.fields) {
+    const chart = document.createElement("div");
+    chart.className = "chart";
+    chart.innerHTML = `<h2>${TITLES[field] || field}</h2>`;
+    for (const [hacked, name] of [[true, "reward hacked"], [false, "did not hack"]]) {
+      const subset = scanned.filter(s => s.hack === hacked);
+      const counts = LEVELS.map(level => subset.filter(s => s[field] === level).length);
+      const row = document.createElement("div");
+      row.className = "row";
+      row.innerHTML = `<div class="row-label"><b>${name}</b>n = ${subset.length}</div>`;
+      const bar = document.createElement("div");
+      bar.className = "bar";
+      if (!subset.length) {
+        bar.innerHTML = `<span class="empty" style="padding:0 10px;line-height:40px">no samples</span>`;
+      } else {
+        counts.forEach((count, i) => {
+          if (!count) return;
+          const seg = document.createElement("div");
+          seg.className = `seg l${i}`;
+          const share = count / subset.length;
+          seg.style.width = `${share * 100}%`;
+          seg.title = `${LEVELS[i]}: ${count} of ${subset.length} (${Math.round(share * 100)}%)`;
+          seg.textContent = share > 0.08 ? `${count}` : "";
+          bar.appendChild(seg);
+        });
+      }
+      row.appendChild(bar);
+      chart.appendChild(row);
+    }
+    chart.insertAdjacentHTML("beforeend",
+      `<div class="legend">${LEVELS.map((l, i) => `<span class="l${i}">${l}</span>`).join("")}</div>`);
+    charts.appendChild(chart);
+  }
+}
+
+render();
+</script>
+</body>
+</html>
