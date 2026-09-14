@@ -13,7 +13,7 @@ from common.agent import MAX_REASONING_TOKENS
 from scanner import cheating_category, target_emitted
 
 # grading cells to run; None runs the whole grid
-GRADINGS = ["report_judge_prompt"]
+GRADINGS = None
 
 eval(
     # both variants in one log directory, so a single scan can group by variant
