@@ -37,4 +37,5 @@ eval(
     ),
     log_dir="logs/test_train",
     reasoning_tokens=MAX_REASONING_TOKENS,
+    epochs=100,
 )

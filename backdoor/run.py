@@ -41,4 +41,5 @@ eval(
     ),
     log_dir="logs/backdoor",
     reasoning_tokens=MAX_REASONING_TOKENS,
+    epochs=100,
 )

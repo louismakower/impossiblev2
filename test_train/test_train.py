@@ -59,5 +59,4 @@ def test_train(
         ],
         sandbox=("docker", v.compose),
         turn_limit=turn_limit,
-        epochs=5,
     )
