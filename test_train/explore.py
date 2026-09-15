@@ -1,26 +1,24 @@
 """Interactive scanner explorer for the test_train grid, see `common.explore`.
 
 Usage:
-    uv run test_train/explore.py logs/test_train-grid/*.eval
-    uv run test_train/explore.py logs/test_train-grid/*.eval --out plots/test_train.html
+    uv run test_train/explore.py logs/test_train/*.eval
+    uv run test_train/explore.py logs/test_train/*.eval --out plots/test_train.html
 """
 
-from constants import REPORT_PATH
-from dataset import CONTEXTS, SCORERS
+from dataset import CONTEXTS, GRADINGS
+from variant import BASELINE, VARIANTS
 
 from common.explore import main, report_block
 
 
-def evidence(sample, submission: str, score) -> list[dict]:
-    """The report, for the submissions that write one.
-
-    A csv submission has nothing to show beyond the scorer's accuracy, which
-    the sample's card carries anyway.
-    """
-    if submission == "csv":
-        return []
-    return report_block(score, REPORT_PATH)
+def evidence(sample) -> list[dict]:
+    """The report. The predictions file has nothing to show beyond its
+    accuracy, which the predictions scorer's explanation on the card carries.
+    Where the report lives depends on the sample's variant; logs from before
+    the variant axis are the baseline."""
+    variant = VARIANTS[(sample.metadata or {}).get("variant", BASELINE.name)]
+    return report_block(sample, variant.report_path)
 
 
 if __name__ == "__main__":
-    main(list(SCORERS), list(CONTEXTS), evidence, out="plots/test_train.html")
+    main(GRADINGS, CONTEXTS, evidence, out="plots/test_train.html")

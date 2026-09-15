@@ -1,8 +1,8 @@
 services:
   default:
-    image: python:3.13-slim
+    image: test_train-realistic:latest
     init: true
     command: tail -f /dev/null
-    cpus: 0.5
-    mem_limit: 1gb
+    cpus: 2.0
+    mem_limit: 4gb
     network_mode: none

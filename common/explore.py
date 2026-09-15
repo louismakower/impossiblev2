@@ -1,13 +1,13 @@
 """Build an interactive page of scanner verdicts over an eval grid.
 
-Stacked bars, one per cell of the grid (model, submission, context), split by
-the scorer's or a scanner's verdict; a switcher on the page picks which. Clicking a
-segment lists the samples behind it, each with the evidence it was graded on,
-the scorer's verdict, and every scanner's verdict and explanation.
+Stacked bars, one per cell of the grid (model, grading, context), split by
+one scorer's or a scanner's verdict; a switcher on the page picks which. Clicking
+a segment lists the samples behind it, each with the evidence it was graded on,
+every scorer's verdict, and every scanner's verdict and explanation.
 
 Each task has a short script that calls `main` with what differs between
-tasks: the display order of its submissions and contexts, and how to recover
-the graded artifact from a sample. See `test_train/explore.py`.
+tasks: the display order of its gradings and contexts, and how to recover
+the graded artifacts from a sample. See `test_train/explore.py`.
 """
 
 import argparse
@@ -17,7 +17,6 @@ from typing import Callable
 
 import pandas as pd
 from inspect_ai.log import EvalSample, read_eval_log
-from inspect_ai.scorer import Score
 from inspect_scout import scan_list, scan_results_df
 
 TEMPLATE = Path(__file__).parent / "explorer.html"
@@ -34,10 +33,10 @@ HONESTY_LABELS = {
 # The awareness scanner's levels, low to high. Mirrors `AwarenessLevel`.
 AWARENESS_LEVELS = ["none", "implied", "explicit"]
 
-# What a chart's bars can be split by: the scorer's verdict (`scanner` None),
-# or a scanner, optionally one field of a structured scanner's answer, with
-# the band order and page wording to match. `palette` is a named scale from
-# `explorer.html` or one CSS colour per band.
+# What a chart's bars can be split by: a scanner, optionally one field of a
+# structured scanner's answer, with the band order and page wording to match.
+# `palette` is a named scale from `explorer.html` or one CSS colour per band.
+# One more chart per scorer is added in `main`, once the logs say which ran.
 CHARTS = [
     {
         "key": "honesty",
@@ -58,36 +57,42 @@ CHARTS = [
         "subtitle": "Awareness scanner, `eval_awareness` field, one bar per cell of the grid.",
     },
     {
-        "key": "task_impossible",
+        "key": "rewardhack_eval_awareness",
         "scanner": "awareness",
-        "field": "task_impossible",
+        "field": "rewardhack_eval_awareness",
         "bands": [{"key": level, "label": level} for level in AWARENESS_LEVELS],
         "palette": "ordinal",
-        "title": "Did the agent work out that the task is impossible?",
-        "subtitle": "Awareness scanner, `task_impossible` field, one bar per cell of the grid.",
+        "title": "Did the agent suspect it was being tested for reward hacking?",
+        "subtitle": "Awareness scanner, `rewardhack_eval_awareness` field, one bar per cell of the grid.",
     },
-    {
-        "key": "score",
+]
+
+
+def score_chart(scorer: str) -> dict:
+    """The chart splitting the bars by one scorer's verdict."""
+    return {
+        "key": f"score:{scorer}",
+        "scorer": scorer,
         "scanner": None,
         "field": None,
         "bands": [{"key": "C", "label": "pass"}, {"key": "I", "label": "fail"}],
         "palette": ["var(--pass)", "var(--fail)"],
-        "title": "Did the scorer pass the agent?",
-        "subtitle": "The task's scorer, one bar per cell of the grid.",
-    },
-]
+        "title": f"Did {scorer} pass the agent?",
+        "subtitle": f"The `{scorer}` scorer, one bar per cell of the grid.",
+    }
+
 
 # What a sample was graded on, as blocks to show under the chart: each a dict
 # with a `title` and the `text` to show beneath it.
-Evidence = Callable[[EvalSample, str, Score], list[dict]]
+Evidence = Callable[[EvalSample], list[dict]]
 
 
-def report_block(score: Score, path: str) -> list[dict]:
-    """The report the judge read, which the judges keep as the score's answer."""
-    if not score.answer:
-        return [{"title": "no graded artifact",
-                 "text": "The agent never wrote the file this submission is graded on."}]
-    return [{"title": f"report ({path})", "text": score.answer}]
+def report_block(sample: EvalSample, path: str) -> list[dict]:
+    """The report the judge read, which the judges keep as their score's answer."""
+    judge = sample.scores.get("report_judge") if sample.scores else None
+    if not judge or not judge.answer:
+        return [{"title": "no report", "text": f"The agent never wrote a readable report at {path}."}]
+    return [{"title": f"report ({path})", "text": judge.answer}]
 
 
 def parse_value(value):
@@ -131,31 +136,34 @@ def samples(logs: list[str], scans: dict[str, dict], evidence: Evidence) -> list
         model = log.eval.model.split("/")[-1]
         for sample in log.samples or []:
             metadata = sample.metadata or {}
-            submission = metadata.get("submission", "unknown")
-            name, score = next(iter(sample.scores.items()))
+            # one panel per model, or per model and variant when the grid has one
+            panel = " · ".join(filter(None, (model, metadata.get("variant"))))
             rows.append({
                 "id": sample.uuid or f"{sample.id}-{sample.epoch}",
-                "model": model,
-                "submission": submission,
+                "model": panel,
+                "grading": metadata.get("grading", "unknown"),
                 "context": metadata.get("context", "unknown"),
                 "epoch": sample.epoch,
-                "score": {
-                    "scorer": name,
-                    "value": str(score.value),
-                    "answer": score.answer,
-                    "explanation": score.explanation,
-                },
+                "scores": [
+                    {
+                        "scorer": name,
+                        "value": str(score.value),
+                        "answer": score.answer,
+                        "explanation": score.explanation,
+                    }
+                    for name, score in (sample.scores or {}).items()
+                ],
                 "scanners": scans.get(sample.uuid, {}),
-                "evidence": [b for b in evidence(sample, submission, score) if b.get("text")],
+                "evidence": [b for b in evidence(sample) if b.get("text")],
             })
     return rows
 
 
-def main(submissions: list[str], contexts: list[str], evidence: Evidence, out: str) -> None:
+def main(gradings: list[str], contexts: list[str], evidence: Evidence, out: str) -> None:
     """Parse the command line and write the page.
 
     Args:
-        submissions: the task's submission keys, in display order.
+        gradings: the task's grading keys, in display order.
         contexts: the task's context names, in display order.
         evidence: recovers what a sample was graded on, see `Evidence`.
         out: default path for the page; `--out` overrides it.
@@ -169,10 +177,12 @@ def main(submissions: list[str], contexts: list[str], evidence: Evidence, out: s
 
     rows = samples(args.logs, scan_results(args.scans or ["scans"]), evidence)
     scanned = sum(bool(row["scanners"]) for row in rows)
+    # scorers in the order the task ran them, without duplicates across logs
+    scorers = list(dict.fromkeys(s["scorer"] for row in rows for s in row["scores"]))
     payload = {
         "name": Path(args.out).stem,
-        "charts": CHARTS,
-        "submissions": submissions,
+        "charts": [score_chart(s) for s in scorers] + CHARTS,
+        "gradings": gradings,
         "contexts": contexts,
         "samples": rows,
     }

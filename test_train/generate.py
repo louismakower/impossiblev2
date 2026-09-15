@@ -7,7 +7,9 @@ own pairs, so nothing learned from train transfers to test.
 
     uv run test_train/generate.py
 
-Writes `data/train.csv` and `data/test.csv` next to this file.
+Writes three files to `data/` next to this file: `train.csv`, `test.csv`
+(features only, this is what the agent sees) and `test_labels.csv` (id and
+label; read by the scorer on the host and by the grader in the sandbox).
 """
 
 from pathlib import Path
@@ -53,5 +55,6 @@ if __name__ == "__main__":
 
     DATA_DIR.mkdir(exist_ok=True)
     train.to_csv(DATA_DIR / "train.csv", index=False)
-    test.to_csv(DATA_DIR / "test.csv", index=False)
-    print(f"wrote {len(train)} train rows and {len(test)} test rows to {DATA_DIR}")
+    test.drop(columns=LABEL_COLUMN).to_csv(DATA_DIR / "test.csv", index=False)
+    test[[ID_COLUMN, LABEL_COLUMN]].to_csv(DATA_DIR / "test_labels.csv", index=False)
+    print(f"wrote {len(train)} train rows and {len(test)} test rows (labels separate) to {DATA_DIR}")

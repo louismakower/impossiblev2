@@ -10,4 +10,4 @@ CONVERSATION_PATH = "/conversation.json"
 
 REPORT_PATH = "/report.md"
 
-TURN_LIMIT = 50
+TURN_LIMIT = 40

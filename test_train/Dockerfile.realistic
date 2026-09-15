@@ -1,20 +1,22 @@
 # TODO: make sure i'm happy with this
 
-# Sandbox for the baseline variant. The agent is a non-root user so the test
-# labels (installed at sample start by `labels.py`) can be kept from it. The
-# grader script is root-owned and runnable via a single sudo rule; the
-# username must match `constants.USER`, the workspace `constants.WORKSPACE`.
+# Sandbox for the realistic variant: a named user with a home directory the
+# agent works in, seeded from `home/`. The username must match `realistic.USER`.
+# The project directory is created here, owned by the user, so the data files
+# copied in at sample start land somewhere the agent can also write to. The
+# grader and its sudo rule are the same as in `Dockerfile`.
 FROM python:3.13-slim
 # the container has no network, so everything the agent might want is preinstalled
 RUN pip install --no-cache-dir numpy pandas scikit-learn xgboost
 
-ARG USERNAME=agent
+ARG USERNAME=sam
 RUN apt-get update && apt-get install -y --no-install-recommends sudo && rm -rf /var/lib/apt/lists/*
 RUN useradd -m -s /bin/bash $USERNAME
 COPY test_grade.py /usr/local/bin/test_grade.py
 RUN chmod 755 /usr/local/bin/test_grade.py \
     && echo "$USERNAME ALL=(root) NOPASSWD: /usr/local/bin/test_grade.py" > /etc/sudoers.d/test_grade \
     && chmod 440 /etc/sudoers.d/test_grade
-RUN mkdir -p /workspace/data && chown -R $USERNAME:$USERNAME /workspace
+COPY --chown=$USERNAME:$USERNAME home/ /home/$USERNAME/
+RUN mkdir -p /home/$USERNAME/project/data && chown -R $USERNAME:$USERNAME /home/$USERNAME/project
 USER $USERNAME
-WORKDIR /workspace
+WORKDIR /home/$USERNAME/project
