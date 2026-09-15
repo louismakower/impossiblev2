@@ -21,8 +21,10 @@ eval(
         test_train(variant="realistic", gradings=GRADINGS),
     ],
     model=[
-        "openrouter/moonshotai/kimi-k3",
-        "openrouter/z-ai/glm-5.3",
+        # "openrouter/moonshotai/kimi-k3",
+        # "openrouter/z-ai/glm-5.3",
+        "openrouter/openai/gpt-6-astra",
+        # "openrouter/anthropic/claude-fable-5.1"
     ],
     # These upstream providers serve GLM-5.3 with the closing brace dropped
     # from every non-final tool call in a multi-call turn, so Inspect rejects
@@ -37,5 +39,6 @@ eval(
     ),
     log_dir="logs/test_train",
     reasoning_tokens=MAX_REASONING_TOKENS,
-    epochs=100,
+    epochs=1,
+    max_sandboxes=8,
 )

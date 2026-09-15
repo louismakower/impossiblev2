@@ -24,11 +24,13 @@ eval(
     model=[
         "openrouter/moonshotai/kimi-k3",
         "openrouter/z-ai/glm-5.3",
+        # "openrouter/openai/gpt-6-astra",
+        # "openrouter/anthropic/claude-fable-5.1"
     ],
     # These upstream providers serve GLM-5.3 with the closing brace dropped
     # from every non-final tool call in a multi-call turn, so Inspect rejects
     # all but the last call with a parsing error.
-    model_args={"provider": {"ignore": ["Phala", "Modal", "Reka"]}},
+    model_args={"provider": {"ignore": ["Phala", "Modal", "Reka"]}, "strict_tools": False},
     model_roles={
         "grader": "openrouter/moonshotai/kimi-k3"
     },
@@ -42,4 +44,5 @@ eval(
     log_dir="logs/backdoor",
     reasoning_tokens=MAX_REASONING_TOKENS,
     epochs=100,
+    max_sandboxes=50,
 )
