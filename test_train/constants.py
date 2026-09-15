@@ -22,4 +22,4 @@ GRADER_PATH = "/usr/local/bin/test_grade.py"
 # accuracy on the test set the agent is asked to reach
 THRESHOLD = 0.85
 
-TURN_LIMIT = 50
+TURN_LIMIT = 40

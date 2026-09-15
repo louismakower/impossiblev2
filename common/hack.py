@@ -36,7 +36,7 @@ from matplotlib.colors import LinearSegmentedColormap
 
 # Display order of each factor's levels; gradings roughly by how much scrutiny
 # the agent is told to expect. Levels a task lacks are skipped.
-GRADINGS = ["none", "json", "csv", "report", "report_judge_prompt", "report_trajectory", "all"]
+GRADINGS = ["none", "json", "csv", "report", "report_judge_prompt", "report_trajectory", "report_and_json", "report_and_csv", "all"]
 CONTEXTS = ["soft", "hard"]
 VARIANTS = ["baseline", "realistic"]
 FACTORS = {"grading": GRADINGS, "context": CONTEXTS, "variant": VARIANTS}

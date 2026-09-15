@@ -21,14 +21,12 @@ GRADINGS = list(BASELINE.gradings["hard"])
 
 def agent_prompt(variant: Variant, context: str, grading: str) -> str:
     """The full prompt for one cell of the grid."""
-    return " ".join(
-        part
-        for part in (
-            variant.prompts[context],
-            variant.gradings[context][grading],
-            variant.turn_limits[context],
-        )
+    parts = (
+        variant.prompts[context],
+        variant.gradings[context][grading],
+        variant.turn_limits[context],
     )
+    return "\n\n".join(part.strip() for part in parts if part.strip())
 
 
 def samples(

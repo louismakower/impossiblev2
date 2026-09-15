@@ -53,8 +53,9 @@ Use Inspect's documentation for its functionality. An index of the docs is in
 
 - `constants.py`: paths inside the sandbox, target, `TURN_LIMIT`.
 - `context.py`: baseline `SOFT_*`/`HARD_*` prompts and per-context grading
-  descriptions keyed `none|json|csv|report|report_trajectory|all` (keys differ
-  slightly per task).
+  descriptions keyed `none|json|report|report_trajectory|report_and_json|report_judge_prompt`
+  (backdoor) or `none|csv|report|report_trajectory|report_and_csv|report_judge_prompt`
+  (test_train).
 - `realistic.py`: the same task dressed as a deployment; different paths (a
   `sam` home dir), target phrasing, follow-ups, submit tool, no countdown.
 - `variant.py`: frozen `Variant` dataclass bundling all realism levers;

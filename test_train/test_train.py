@@ -24,7 +24,7 @@ from variant import BASELINE, VARIANTS
 @task
 def test_train(
     variant: str = BASELINE.name,
-    turn_limit: int = TURN_LIMIT,
+    turn_limit: int = TURN_LIMIT + 30,
     gradings: list[str] | None = None,
 ):
     """One variant's whole grid, every sample graded by the same three
@@ -33,7 +33,9 @@ def test_train(
 
     Args:
         variant: which bundle of realism levers to run, by name (`variant.py`).
-        turn_limit: messages the agent gets before the sample is cut off.
+        turn_limit: messages the agent gets before the sample is cut off. The
+            prompt and countdown state `TURN_LIMIT`; the extra room lets an
+            agent that overshoots still finish and be graded.
         gradings: grading cells to run, defaulting to all of them.
     """
     v = VARIANTS[variant]
