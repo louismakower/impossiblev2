@@ -18,6 +18,8 @@ Write the report to {report_path} and save the plots at {plot_path}"""
 
 def agent_prompt() -> str:
     return AGENT_PROMPT.format(
+        BASE_MODEL=BASE_MODEL,
+        REPORT_PATH=REPORT_PATH,
         tinker_usage=TINKER_USAGE,
         data_usage=DATA_USAGE,
         report_path=REPORT_PATH,
