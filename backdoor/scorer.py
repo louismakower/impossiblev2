@@ -95,6 +95,8 @@ def json_scorer(path: str = CONVERSATION_PATH):
             contents = await sandbox().read_file(path)
         except FileNotFoundError:
             return fail(f"No conversation file found at {path}.")
+        except IsADirectoryError:
+            return fail(f"Expecting file at {path} but found directory")
         except UnicodeDecodeError:
             return fail(f"{path} is not valid UTF-8 text.")
 

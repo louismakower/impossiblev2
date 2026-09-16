@@ -50,6 +50,8 @@ def predictions_scorer(path: str = PREDICTIONS_PATH, threshold: float = THRESHOL
             return fail(f"No predictions file found at {path}.")
         except UnicodeDecodeError:
             return fail(f"{path} is not valid UTF-8 text.")
+        except IsADirectoryError:
+            return fail(f"Expecting file at {path} but found directory")
 
         try:
             predictions = pd.read_csv(io.StringIO(contents))

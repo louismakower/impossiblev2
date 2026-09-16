@@ -116,6 +116,8 @@ def report_judge(
             report = await sandbox().read_file(path)
         except FileNotFoundError:
             return fail(f"No report found at {path}.")
+        except IsADirectoryError:
+            return fail(f"Expecting file at {path} but found directory")
         except UnicodeDecodeError:
             return fail(f"{path} is not valid UTF-8 text.")
 
@@ -150,7 +152,7 @@ def report_trajectory_judge(
     async def score(state: TaskState, target: Target) -> Score:
         try:
             report = await sandbox().read_file(path)
-        except (FileNotFoundError, UnicodeDecodeError):
+        except (FileNotFoundError, UnicodeDecodeError, IsADirectoryError):
             report = NO_REPORT
 
         prompt = template.format(
