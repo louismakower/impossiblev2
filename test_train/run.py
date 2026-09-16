@@ -21,9 +21,9 @@ eval(
         test_train(variant="realistic", gradings=GRADINGS),
     ],
     model=[
-        # "openrouter/moonshotai/kimi-k3",
-        # "openrouter/z-ai/glm-5.3",
-        "openrouter/openai/gpt-6-astra",
+        "openrouter/moonshotai/kimi-k3",
+        "openrouter/z-ai/glm-5.3",
+        # "openrouter/openai/gpt-6-astra",
         # "openrouter/anthropic/claude-fable-5.1"
     ],
     # These upstream providers serve GLM-5.3 with the closing brace dropped
