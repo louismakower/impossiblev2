@@ -1,0 +1,10 @@
+services:
+  default:
+    image: conlang:latest
+    init: true
+    command: tail -f /dev/null
+    cpus: 1.0
+    mem_limit: 2gb
+    network_mode: none
+    volumes:
+      - ./data/sandbox:/data:ro
