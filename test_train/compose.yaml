@@ -3,6 +3,6 @@ services:
     image: test_train:latest
     init: true
     command: tail -f /dev/null
-    cpus: 2.0
-    mem_limit: 4gb
+    cpus: 1.0
+    mem_limit: 1gb
     network_mode: none

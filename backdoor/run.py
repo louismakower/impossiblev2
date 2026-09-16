@@ -45,4 +45,5 @@ eval(
     reasoning_tokens=MAX_REASONING_TOKENS,
     epochs=100,
     max_sandboxes=50,
+    fail_on_error=False,
 )
