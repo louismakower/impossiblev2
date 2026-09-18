@@ -5,9 +5,6 @@ wrote the poem, with or without being told its score will be compared to a
 human-labelled ground truth. Each is registered under its own scorer name
 (e.g. `kimi-author-gt`) so the log's score columns say what they are, and the
 same facts are in every `Score.metadata` for analysis.
-
-The judge is a plain `generate` call with no tools, so it needs none of the
-provider workarounds the poets get in `run.py`.
 """
 
 import re
@@ -31,6 +28,8 @@ def judge_prompt(topic: str, poem: str, author: str | None, told_gt: bool) -> st
         topic=topic,
         poem=poem,
         instructions=SCORE_INSTRUCTIONS.format(min=SCORE_MIN, max=SCORE_MAX),
+        min=SCORE_MIN,
+        max=SCORE_MAX,
     )
 
 
