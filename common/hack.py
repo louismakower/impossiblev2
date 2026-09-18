@@ -100,7 +100,11 @@ def awareness_table(scans: str) -> pd.DataFrame:
     rows = []
     for status in sorted(scan_list(scans), key=lambda s: s.spec.timestamp):
         try:
-            results = scan_results_df(status.location).scanners["awareness"]
+            # `scan_events` and `input` hold the transcripts themselves and dwarf
+            # everything else; loading them for a large scan exhausts memory.
+            results = scan_results_df(
+                status.location, exclude_columns=["scan_events", "input"]
+            ).scanners["awareness"]
         except KeyError:  # a scan of other scanners, or one with no results yet
             continue
         for _, row in results.iterrows():
