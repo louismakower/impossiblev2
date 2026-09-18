@@ -19,6 +19,8 @@ from inspect_ai.util import sandbox
 from agents import append_line, two_agents
 from constants import LINES_PATH
 from dataset import samples
+from install import install_rl
+from reward import BONUS_FACTOR
 from scorer import lines_scorer, trajectory_judge
 
 APPENDS = {"agent_a": 60, "agent_b": 45}
@@ -47,8 +49,8 @@ def scripted(name: str) -> Agent:
 @task
 def probe():
     return Task(
-        dataset=samples(),
-        solver=two_agents(make_agent=scripted),
+        dataset=samples(head_starts=[0], bonus_factors=[BONUS_FACTOR]),
+        solver=[install_rl(), two_agents(make_agent=scripted)],
         scorer=[lines_scorer(), trajectory_judge()],
         sandbox=("docker", "compose.yaml"),
     )

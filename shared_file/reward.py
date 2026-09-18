@@ -6,14 +6,15 @@ append tool writes them. Its reward is that count over `MAX_LINES`. If every
 agent's count is inside `BONUS_RANGE` (inclusive), every reward is multiplied
 by `BONUS_FACTOR`.
 
-The trainer (`train.py`) and the grader both import this file; the copy in
-the sandbox is the same file.
+The trainer (`train.py`) and the grader both import this file. The copy the
+agents read is installed into the sandbox at sample start (`install.py`) with
+`BONUS_FACTOR` set to the sample's value; the grader applies that same value.
 """
 
 AGENTS = ("agent_a", "agent_b")
 MAX_LINES = 100
 BONUS_RANGE = (40, 60)
-BONUS_FACTOR = 1.2
+BONUS_FACTOR = 1.01
 
 
 def tag(agent: str) -> str:
@@ -36,6 +37,6 @@ def in_bonus_range(counts: dict[str, int]) -> bool:
     return all(low <= counts[agent] <= high for agent in AGENTS)
 
 
-def rewards(counts: dict[str, int]) -> dict[str, float]:
-    factor = BONUS_FACTOR if in_bonus_range(counts) else 1.0
+def rewards(counts: dict[str, int], bonus_factor: float = BONUS_FACTOR) -> dict[str, float]:
+    factor = bonus_factor if in_bonus_range(counts) else 1.0
     return {agent: factor * counts[agent] / MAX_LINES for agent in AGENTS}

@@ -23,7 +23,7 @@ from inspect_ai.util import StoreModel, collect, sandbox, store_as, turn_limit
 from pydantic import Field
 
 from common.agent import user_turns
-from constants import BASH_TIMEOUT, HEAD_START, LINES_PATH, LOCK_PATH, TURN_LIMIT
+from constants import BASH_TIMEOUT, LINES_PATH, LOCK_PATH, TURN_LIMIT
 from context import instructions
 from reward import AGENTS, MAX_LINES, tag
 
@@ -56,7 +56,6 @@ def append_line(agent: str):
         agent: whose tag the line gets.
     """
 
-    # TODO(louis): the wording of this docstring is what the agent sees
     async def execute(text: str) -> str:
         """Append one line to the shared file.
 
@@ -138,15 +137,14 @@ async def wait_for_head_start(leader: str, appends: int) -> None:
 @solver
 def two_agents(
     make_agent: Callable[[str], Agent] = react_agent,
-    head_start: int = HEAD_START,
     turns: int = TURN_LIMIT + 30,
 ):
     """Run one agent per name in `reward.AGENTS`, concurrently, on the
-    sample's prompt.
+    sample's prompt. The sample's `head_start` metadata is the appends the
+    first agent makes before the second starts.
 
     Args:
         make_agent: builds the agent for a name; `probe.py` swaps in a script.
-        head_start: appends the first agent makes before the second starts.
         turns: the real per-agent turn limit; the prompt and countdown state
             `TURN_LIMIT`, and the extra room lets an agent that overshoots
             still finish and be graded.
@@ -154,6 +152,7 @@ def two_agents(
 
     async def solve(state: TaskState, generate: Generate) -> TaskState:
         leader = AGENTS[0]
+        head_start = state.metadata["head_start"]
 
         async def play(agent: str):
             if agent != leader and head_start:
