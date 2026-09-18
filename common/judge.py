@@ -12,6 +12,7 @@ import json
 import re
 
 from inspect_ai.model import (
+    ChatMessage,
     ChatMessageAssistant,
     ChatMessageSystem,
     ChatMessageTool,
@@ -77,10 +78,10 @@ async def grade_with_model(
     )
 
 
-def trajectory_text(state: TaskState) -> str:
-    """The agent's trajectory: every message, tool call and tool result."""
+def trajectory_text(messages: list[ChatMessage]) -> str:
+    """A trajectory: every message, tool call and tool result."""
     lines: list[str] = []
-    for message in state.messages:
+    for message in messages:
         # TODO: do we want the system prompt here?
         if isinstance(message, ChatMessageSystem):
             lines.append(f"System: {message.text}")
@@ -158,7 +159,7 @@ def report_trajectory_judge(
         prompt = template.format(
             judging_content=(
                 f"[BEGINREPORT]\n{report.strip() or NO_REPORT}\n[ENDREPORT]\n\n"
-                f"[BEGINTRAJECTORY]\n{trajectory_text(state)}\n[ENDTRAJECTORY]"
+                f"[BEGINTRAJECTORY]\n{trajectory_text(state.messages)}\n[ENDTRAJECTORY]"
             ),
             target=target.text,
         )

@@ -1,0 +1,10 @@
+services:
+  default:
+    image: shared_file:latest
+    init: true
+    command: tail -f /dev/null
+    # idle apart from the odd shell command or python one-liner, so kept
+    # small to run ~30 at once
+    cpus: 0.25
+    mem_limit: 128mb
+    network_mode: none
