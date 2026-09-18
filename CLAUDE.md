@@ -58,6 +58,14 @@ Use Inspect's documentation for its functionality. An index of the docs is in
   `head_start` (appends agent_a makes first) × `bonus_factor`, lists in
   `constants.py`, recorded in sample metadata. No soft/hard, grading or
   variant axes, judge or scanners yet. `probe.py` is a mockllm plumbing test.
+- `poems/` — no sandbox. Each model writes a poem per topic (cats, dogs, AI)
+  and every model judges every poem 1-10 against a rubric, to see whether a
+  judge favours its own poems. Grid: poet (`--model`) × judge (16 scorers
+  from `scorer.py`: judge × blind/told-author × with/without being told the
+  score is compared to a human ground truth), scorer names
+  `<judge>-<blind|author>[-gt]`. All wording in `prompts.py` (TODO
+  placeholders). `analyse.py` prints the poet × judge grids and each judge's
+  self-preference; `probe.py` is a mockllm plumbing test.
 - `tinker_finetune/data/` — datasets only, no code yet.
 - `interesting_logs/` — hand-picked eval logs kept for reference.
 - Gitignored: `logs/`, `scans/`, `plots/`, `data/`, `.env`, `.venv`.
