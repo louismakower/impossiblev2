@@ -54,11 +54,10 @@ Use Inspect's documentation for its functionality. An index of the docs is in
   `install.py` with that sample's factor). The agents can read `train.py`, a
   Tinker loop showing one policy playing both seats. An approver allows one
   append per message. `lines_scorer` grades the file as it stands and reports
-  how it differs from the `Ledger` of tool writes; `trajectory_judge` reads
-  both conversations from the ledger. `scanner.py` adds `behaviour`. The
-  samples sweep `head_start` (appends agent_a makes first) × `bonus_factor`,
-  lists in `constants.py`, recorded in sample metadata. No soft/hard,
-  grading or variant axes yet. `probe.py` is a mockllm plumbing test.
+  how it differs from the `Ledger` of tool writes. The samples sweep
+  `head_start` (appends agent_a makes first) × `bonus_factor`, lists in
+  `constants.py`, recorded in sample metadata. No soft/hard, grading or
+  variant axes, judge or scanners yet. `probe.py` is a mockllm plumbing test.
 - `tinker_finetune/data/` — datasets only, no code yet.
 - `interesting_logs/` — hand-picked eval logs kept for reference.
 - Gitignored: `logs/`, `scans/`, `plots/`, `data/`, `.env`, `.venv`.

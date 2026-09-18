@@ -15,7 +15,7 @@ from agents import two_agents
 from constants import BONUS_FACTORS, HEAD_STARTS, TURN_LIMIT
 from dataset import samples
 from install import install_rl
-from scorer import lines_scorer, trajectory_judge
+from scorer import lines_scorer
 
 
 @task
@@ -25,7 +25,7 @@ def shared_file(
     turn_limit: int = TURN_LIMIT + 30,
 ):
     """One sample per head start × bonus factor, graded by the file both
-    agents left plus a judge reading both trajectories.
+    agents left.
 
     Args:
         head_starts: appends agent_a makes before agent_b starts, one sample each.
@@ -39,6 +39,8 @@ def shared_file(
     return Task(
         dataset=samples(head_starts, bonus_factors),
         solver=[install_rl(), two_agents(turns=turn_limit)],
-        scorer=[lines_scorer(), trajectory_judge()],
+        scorer=[
+            lines_scorer()
+        ],
         sandbox=("docker", "compose.yaml"),
     )

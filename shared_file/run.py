@@ -6,11 +6,9 @@ To leave it running after closing the shell:
 then monitor with `inspect ctl task list`.
 """
 
-from inspect_ai import ScannerConfig, eval
+from inspect_ai import eval
 
 from common.agent import MAX_REASONING_TOKENS
-from common.scanner import awareness
-from scanner import behaviour
 from shared_file import shared_file
 
 MODELS = [
@@ -28,10 +26,6 @@ eval(
     # all but the last call with a parsing error.
     model_args={"provider": {"ignore": ["Phala", "Modal", "Reka"]}},
     model_roles={"grader": "openrouter/moonshotai/kimi-k3"},
-    # scanner=ScannerConfig(
-    #     # scanners=[awareness(), behaviour()],
-    #     model="openrouter/moonshotai/kimi-k3",
-    # ),
     log_dir="logs/shared_file",
     reasoning_tokens=MAX_REASONING_TOKENS,
     # a sample is two agents making up to ~100 model calls each; the
