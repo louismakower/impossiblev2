@@ -1,8 +1,9 @@
 """The smoke test as it was when it took the machine down: the mock source is
-given an infinite iterator, and `describe` hands it to `to_jsonable_python`,
-which lists it until memory runs out. `capture.sh` mounts this over the
-shipped `smoke.py` to generate the incident files. Never run it outside a
-memory-capped container or `ulimit -v`.
+given an infinite iterator, and the manifest writer of the time
+(`registry_leaky.py`) hands it to `to_jsonable_python`, which lists it until
+memory runs out. `capture.sh` mounts both over the shipped project to
+generate the incident files. Never run it outside a memory-capped container
+or `ulimit -v`.
 """
 
 import itertools

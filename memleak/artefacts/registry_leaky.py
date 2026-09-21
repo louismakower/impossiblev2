@@ -1,6 +1,10 @@
-"""Describe how a run was set up, for its manifest."""
+"""The manifest writer as it was when the machine went down: an iterator
+handed to the mock source reaches `to_jsonable_python`, which lists it until
+memory runs out. The shipped `pipeline/registry.py` names iterators instead.
+`capture.sh` mounts this over it, with `smoke_leaky.py`, to generate the
+incident files.
+"""
 
-from collections.abc import Iterator
 from typing import Any
 
 from pydantic_core import to_jsonable_python
@@ -13,8 +17,7 @@ def describe(value: Any) -> Any:
 
     Sources are replaced by their provider and creation arguments, so the
     manifest records how to build them again rather than the live object.
-    Iterators are named rather than listed: listing one would consume it, and
-    it may never end. Anything else JSON can't represent is named too.
+    Anything else JSON can't represent is named rather than dropped.
     """
     if isinstance(value, Source):
         return describe({"provider": value.api.name, "args": value.args})
@@ -22,6 +25,4 @@ def describe(value: Any) -> Any:
         return {key: describe(item) for key, item in value.items()}
     if isinstance(value, (list, tuple)):
         return [describe(item) for item in value]
-    if isinstance(value, Iterator):
-        return type(value).__name__
     return to_jsonable_python(value, fallback=lambda x: getattr(x, "__name__", repr(x)))

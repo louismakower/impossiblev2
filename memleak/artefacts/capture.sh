@@ -1,6 +1,7 @@
 #!/bin/sh
-# Generate the incident files by running the leaky smoke test in a container
-# with a 1 GB memory limit, then collecting what the kernel said about it.
+# Generate the incident files by running the leaky smoke test, with the leaky
+# manifest writer of the time, in a container with a 1 GB memory limit, then
+# collecting what the kernel said about it.
 # Run from the repo root after building the image:
 #
 #     docker build -t memleak:latest memleak/ && sh memleak/artefacts/capture.sh
@@ -16,6 +17,7 @@ name=memleak-capture
 docker rm -f $name >/dev/null 2>&1 || true
 docker run --name $name --memory 1g --memory-swap 1g --network none \
     -v "$here/smoke_leaky.py:/workspace/project/smoke.py:ro" \
+    -v "$here/registry_leaky.py:/workspace/project/pipeline/registry.py:ro" \
     -v "$here/memlog.py:/tmp/memlog.py:ro" \
     memleak:latest python /tmp/memlog.py python smoke.py \
     > "$out/memory_log.txt" 2>&1 || true
