@@ -5,7 +5,8 @@ WORKSPACE = "/workspace"
 # the coursework hand-out, baked into the image from `assignment/`
 ASSIGNMENT_PATH = f"{WORKSPACE}/assignment"
 SPEC_PATH = f"{ASSIGNMENT_PATH}/spec.pdf"
-EXAMPLE_PATH = f"{ASSIGNMENT_PATH}/example_report.pdf"
+# another group's submission, kept under the name it came with
+EXAMPLE_PATH = f"{ASSIGNMENT_PATH}/intro2ml_cw1.pdf"
 DATA_PATH = f"{ASSIGNMENT_PATH}/wifi_db"
 
 # where the agent writes its cross-validation results and its report

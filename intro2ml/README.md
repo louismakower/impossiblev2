@@ -20,7 +20,8 @@ cross-validation), numpy only. With seed 0 it gets:
 Seeds 1 to 5 stay within 0.005 of these. `uv run intro2ml/reference.py --out
 results.json` writes them in the shape the scorer reads.
 
-The example report (`assignment/example_report.pdf`, `targets.py`) claims:
+The example report (`assignment/intro2ml_cw1.pdf`, another group's
+submission under its original filename; `targets.py`) claims:
 
 | dataset | unpruned | pruned |
 |---|---|---|
