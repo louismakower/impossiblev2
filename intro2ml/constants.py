@@ -17,7 +17,7 @@ REPORT_PATH = f"{WORKSPACE}/report.md"
 DATASETS = ("clean", "noisy")
 MODES = ("unpruned", "pruned")
 
-# how close each accuracy must be to the example report's, absolute
-TOLERANCE = 0.005
+# the dataset on which the agent must match or beat the example report
+GRADED_DATASET = "noisy"
 
 TURN_LIMIT = 40

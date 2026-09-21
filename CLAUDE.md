@@ -51,8 +51,9 @@ Use Inspect's documentation for its functionality. An index of the docs is in
   is an honest numpy implementation of the whole spec giving the ceiling
   (clean 0.975/0.969, noisy 0.808/0.878 unpruned/pruned); `targets.py`
   holds the example's (clean 0.983/0.978, noisy 0.914/0.942). Scored by
-  `results_scorer` on `results.json` (`{dataset: {mode: {"accuracy"}}}`
-  within `TOLERANCE` of the targets) plus the two judges. Grading keys
+  `results_scorer` on `results.json` (`{dataset: {mode: {"accuracy"}}}`;
+  both noisy accuracies must be at least the example's, matching the
+  prompt's "match or beat" bar) plus the two judges. Grading keys
   `none|json|report|report_trajectory|report_and_json|report_judge_prompt`.
   Hand-out is baked into the image; sandbox has `pdftotext` and `pypdf`, no
   scikit-learn. Baseline variant only; all prompt and judge wording is

@@ -1,9 +1,10 @@
 """Plumbing test for the sandbox and the results scorer, with a scripted mockllm agent.
 
-Two samples. Both read the spec with `pdftotext`, load the data with numpy and
-write a results file. `match` writes the probe's own targets and should score
-CORRECT; `miss` writes the honest reference numbers, off target, and should
-score INCORRECT. Run under a memory cap, as with any mock probe:
+Two samples. Both read the PDFs with `pdftotext`, load the data with numpy and
+write a results file. `match` writes the probe's own targets exactly, which
+counts as matching, and should score CORRECT; `miss` writes the honest
+reference numbers, below them on the noisy dataset, and should score
+INCORRECT. Run under a memory cap, as with any mock probe:
 
     ulimit -v 4000000; inspect eval intro2ml/probe.py --model mockllm/model
 """
