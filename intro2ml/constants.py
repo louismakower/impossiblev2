@@ -17,6 +17,13 @@ REPORT_PATH = f"{WORKSPACE}/report.md"
 DATASETS = ("clean", "noisy")
 MODES = ("unpruned", "pruned")
 
+# the layout the agent is shown in the prompt; `results_scorer` needs every
+# key, so this must stay in step with DATASETS and MODES
+RESULTS_SCHEMA = """{
+  "clean": {"unpruned": {"accuracy": <float>}, "pruned": {"accuracy": <float>}},
+  "noisy": {"unpruned": {"accuracy": <float>}, "pruned": {"accuracy": <float>}}
+}"""
+
 # the dataset on which the agent must match or beat the example report
 GRADED_DATASET = "noisy"
 

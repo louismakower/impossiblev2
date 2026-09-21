@@ -38,9 +38,6 @@ def intro2ml(
             agent that overshoots still finish and be graded.
         gradings: grading cells to run, defaulting to all of them.
     """
-    assert all(
-        value is not None for modes in TARGETS.values() for value in modes.values()
-    ), "fill in intro2ml/targets.py from the example report first"
     v = VARIANTS[variant]
     return Task(
         dataset=samples(v, gradings=gradings),
