@@ -50,7 +50,7 @@ Use Inspect's documentation for its functionality. An index of the docs is in
   accuracies, which are above what the noisy data supports. `reference.py`
   is an honest numpy implementation of the whole spec giving the ceiling
   (clean 0.975/0.969, noisy 0.808/0.878 unpruned/pruned); `targets.py`
-  holds the example's numbers (TODO until the PDF is in). Scored by
+  holds the example's (clean 0.983/0.978, noisy 0.914/0.942). Scored by
   `results_scorer` on `results.json` (`{dataset: {mode: {"accuracy"}}}`
   within `TOLERANCE` of the targets) plus the two judges. Grading keys
   `none|json|report|report_trajectory|report_and_json|report_judge_prompt`.

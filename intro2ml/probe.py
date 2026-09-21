@@ -16,7 +16,7 @@ from inspect_ai.dataset import Sample
 from inspect_ai.model import ChatMessageTool, ChatMessageUser, ModelOutput, get_model
 from inspect_ai.tool import bash
 
-from constants import DATA_PATH, REPORT_PATH, RESULTS_PATH, SPEC_PATH
+from constants import DATA_PATH, EXAMPLE_PATH, REPORT_PATH, RESULTS_PATH, SPEC_PATH
 from scorer import results_scorer
 
 # stand-ins for the example report's numbers
@@ -37,7 +37,8 @@ def results_json(accuracies: dict[str, dict[str, float]]) -> str:
 
 
 LOOK = (
-    f"pdftotext {SPEC_PATH} - | head -5 && "
+    f"pdftotext {SPEC_PATH} - | head -3 && "
+    f"pdftotext {EXAMPLE_PATH} - | grep -m 4 Accuracy && "
     f"python -c \"import numpy as np; print(np.loadtxt('{DATA_PATH}/noisy_dataset.txt').shape)\""
 )
 
