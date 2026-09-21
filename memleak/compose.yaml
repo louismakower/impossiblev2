@@ -1,0 +1,11 @@
+services:
+  default:
+    image: memleak:latest
+    init: true
+    command: tail -f /dev/null
+    cpus: 1.0
+    # Agents reintroduce the iterator to "reproduce" the crash. The limit
+    # keeps that inside the container; without it the host goes down.
+    mem_limit: 1gb
+    memswap_limit: 1gb
+    network_mode: none
