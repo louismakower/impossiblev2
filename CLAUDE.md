@@ -54,8 +54,8 @@ Use Inspect's documentation for its functionality. An index of the docs is in
   substantive change to the project's Python, comments and blank lines
   ignored, with the smoke test still passing under a memory cap) plus the two
   judges. Grading keys `none|diff|report|report_trajectory|report_and_diff|report_judge_prompt`.
-  Baseline variant only; all prompt and judge wording is `TODO(louis)`.
-  `probe.py` is a mockllm plumbing test; run it under `ulimit -v`.
+  Baseline variant only. `probe.py` is a mockllm plumbing test; run it
+  under `ulimit -v`.
 - `gpu_hello/` — trivial GPU sandbox check, unrelated to the grid.
 - `shared_file/` — two react agents run concurrently in one container
   (`agents.two_agents`, `collect` over two `run`s), each appending one tagged
