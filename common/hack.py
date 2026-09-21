@@ -160,18 +160,20 @@ def marginal(ax, df: pd.DataFrame, factor: str, models: list[str]) -> None:
     style(ax)
 
 
-def heatmap(ax, df: pd.DataFrame, model: str, measure: str, high: float) -> None:
+def heatmap(ax, df: pd.DataFrame, model: str, measure: str) -> None:
     """One measure's rate per cell of the grid for one model, labelled
-    hits/samples. Samples without a value for the measure are left out; an
-    `_explicit` companion column, if present, is counted under the label."""
+    hits/samples, on a fixed 0-100% colour scale so panels are comparable.
+    Samples without a value for the measure are left out; an `_explicit`
+    companion column, if present, is counted under the label."""
     subset = df[(df["model"] == model) & df[measure].notna()]
     explicit = f"{measure}_explicit" if f"{measure}_explicit" in df else None
     columns = levels(df, "grading")
-    rows = [(c, v) for c in levels(df, "context") for v in levels(df, "variant")]
+    # every variant, so a run of only one still shows the other's row, as n/a
+    rows = [(c, v) for c in levels(df, "context") for v in FACTORS["variant"]]
     cells = [[subset[(subset.context == c) & (subset.variant == v) & (subset.grading == g)] for g in columns] for c, v in rows]
     rates = [[cell[measure].mean() if len(cell) else float("nan") for cell in row] for row in cells]
 
-    ax.imshow(rates, cmap=LinearSegmentedColormap.from_list("seq", SEQUENTIAL), vmin=0, vmax=high, aspect="auto")
+    ax.imshow(rates, cmap=LinearSegmentedColormap.from_list("seq", SEQUENTIAL), vmin=0, vmax=1, aspect="auto")
     for y, row in enumerate(cells):
         for x, cell in enumerate(row):
             if len(cell):
@@ -179,7 +181,9 @@ def heatmap(ax, df: pd.DataFrame, model: str, measure: str, high: float) -> None
                 if explicit and cell[explicit].any():
                     label += f"\n{int(cell[explicit].sum())} explicit"
                 ax.text(x, y, label, ha="center", va="center", fontsize=9, linespacing=1.4,
-                        color=SURFACE if rates[y][x] > high * 0.55 else INK_MUTED)
+                        color=SURFACE if rates[y][x] > 0.55 else INK_MUTED)
+            else:
+                ax.text(x, y, "n/a", ha="center", va="center", fontsize=9, color=INK_MUTED)
     ax.set_xticks(range(len(columns)), [c.replace("_", "\n") for c in columns], fontsize=9)
     ax.set_yticks(range(len(rows)), [f"{c} · {v}" for c, v in rows], fontsize=9)
     # A 2px surface gap between cells, drawn as a minor grid.
@@ -216,10 +220,9 @@ def main() -> None:
     for i, factor in enumerate(FACTORS):
         marginal(fig.add_subplot(rows, 3, i + 1), df, factor, models)
     for r, (measure, label) in enumerate(MEASURES.items(), start=1):
-        high = max(0.2, df.groupby(["model", "grading", "context", "variant"])[measure].mean().max())
         for j, model in enumerate(models):
             ax = fig.add_subplot(rows, len(models), r * len(models) + j + 1)
-            heatmap(ax, df, model, measure, high)
+            heatmap(ax, df, model, measure)
             if j == 0:
                 ax.set_ylabel(textwrap.fill(label, 26), fontsize=10, color=INK, labelpad=12)
 
