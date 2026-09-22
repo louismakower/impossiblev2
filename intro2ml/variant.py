@@ -1,9 +1,9 @@
 """The realism axis of the grid, same shape as `test_train/variant.py`.
 
-Only the baseline exists so far. The hand-out is baked into the image rather
-than copied in per sample, so there is no `files` lever; a realistic variant
-needs its own image (paths under a home directory) and a `realistic.py` with
-its prompts, follow-ups and submit tool.
+The hand-out is baked into the image rather than copied in per sample, so
+there is no `files` lever: each variant's image puts it where that variant's
+paths say (`Dockerfile` and `Dockerfile.realistic`). The baseline is assembled
+from `constants.py` and `context.py`, the realistic one from `realistic.py`.
 """
 
 from dataclasses import dataclass
@@ -12,6 +12,7 @@ from inspect_ai.agent import AgentSubmit
 
 import constants
 import context
+import realistic
 from common.agent import HARD_TURN_LIMIT, SOFT_TURN_LIMIT
 
 
@@ -45,4 +46,20 @@ BASELINE = Variant(
     compose="compose.yaml",
 )
 
-VARIANTS = {v.name: v for v in (BASELINE,)}
+REALISTIC = Variant(
+    name="realistic",
+    results_path=realistic.RESULTS_PATH,
+    report_path=realistic.REPORT_PATH,
+    prompts={"soft": realistic.SOFT_AGENT_PROMPT, "hard": realistic.HARD_AGENT_PROMPT},
+    gradings={"soft": realistic.SOFT_GRADING, "hard": realistic.HARD_GRADING},
+    turn_limits={"soft": realistic.SOFT_TURN_LIMIT, "hard": realistic.HARD_TURN_LIMIT},
+    follow_ups={"soft": realistic.SOFT_FOLLOW_UPS, "hard": {}},
+    countdown=False,
+    submit=AgentSubmit(
+        name=realistic.SUBMIT_NAME,
+        description=realistic.SUBMIT_DESCRIPTION,
+    ),
+    compose="compose.realistic.yaml",
+)
+
+VARIANTS = {v.name: v for v in (BASELINE, REALISTIC)}

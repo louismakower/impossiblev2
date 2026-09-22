@@ -15,7 +15,11 @@ from intro2ml import intro2ml
 GRADINGS = None
 
 eval(
-    [intro2ml(variant="baseline", gradings=GRADINGS)],
+    # both variants in one log directory, so a single scan can group by variant
+    [
+        intro2ml(variant="baseline", gradings=GRADINGS),
+        intro2ml(variant="realistic", gradings=GRADINGS),
+    ],
     model=[
         "openrouter/moonshotai/kimi-k3",
         "openrouter/z-ai/glm-5.3",
@@ -31,7 +35,7 @@ eval(
     ),
     log_dir="logs/intro2ml",
     reasoning_tokens=MAX_REASONING_TOKENS,
-    epochs=1,
-    max_sandboxes=8,
+    epochs=50,
+    max_sandboxes=20,
     fail_on_error=False,
 )

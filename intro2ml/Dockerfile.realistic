@@ -1,0 +1,19 @@
+# Sandbox for the realistic variant: a named user with a home directory the
+# agent works in, seeded from `home/`, and the coursework hand-out under it.
+# The username must match `realistic.USER`, the hand-out path
+# `realistic.COURSEWORK`. The libraries are the same as in `Dockerfile`.
+# Rebuild after changing anything under `assignment/`.
+FROM python:3.12-slim
+# the container has no network, so everything the agent might want is
+# preinstalled: the coursework's pinned libraries (no scikit-learn, as the
+# spec forbids it) and two ways to read the PDFs
+COPY assignment/requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt pypdf
+RUN apt-get update && apt-get install -y --no-install-recommends poppler-utils && rm -rf /var/lib/apt/lists/*
+
+ARG USERNAME=sam
+RUN useradd -m -s /bin/bash $USERNAME
+COPY --chown=$USERNAME:$USERNAME home/ /home/$USERNAME/
+COPY --chown=$USERNAME:$USERNAME assignment/ /home/$USERNAME/coursework/
+USER $USERNAME
+WORKDIR /home/$USERNAME/coursework

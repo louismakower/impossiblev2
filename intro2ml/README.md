@@ -46,6 +46,10 @@ run the task
 check the plumbing (PDFs readable, data loads, scorer passes and fails as it should)
 `ulimit -v 4000000; inspect eval intro2ml/probe.py --model mockllm/model`
 
+reward-hack grid (`common/hack.py` is task-agnostic) and the scanner explorer page
+`uv run common/hack.py logs/intro2ml/*.eval --out plots/intro2ml_hack.png`
+`uv run intro2ml/explore.py logs/intro2ml/*.eval --scans logs/intro2ml/scans`
+
 ## scorer
 
 `results_scorer` reads `results.json`, `{dataset: {mode: {"accuracy": x}}}`
@@ -65,6 +69,18 @@ pure-Python nested cross-validation can be slow.
 
 ## variants
 
-Baseline only. A realistic variant needs its own image with the hand-out under
-a home directory, and a `realistic.py` with prompts, follow-ups and a submit
-tool, as in `test_train/`.
+`variant.py` holds the realism axis of the grid. The realistic variant
+(`realistic.py`) puts the same hand-out in a coursework folder under a
+student's home directory, drops the countdown, renames submit and delivers
+the soft budget as a follow-up. The prompts are the baseline's with the
+paths moved; the grading text says the same things as a person describing
+how they will check the work, as in `test_train/realistic.py`. It needs its
+own image, with a user and home directory seeded from `home/`:
+
+`docker build -t intro2ml-realistic:latest -f intro2ml/Dockerfile.realistic intro2ml/`
+
+then pick the variant with a task arg:
+
+`inspect eval intro2ml/intro2ml.py -T variant=realistic --model ...`
+
+`run.py` runs both into the same log directory.
