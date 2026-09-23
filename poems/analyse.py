@@ -4,7 +4,8 @@ everyone else's.
 
     uv run poems/analyse.py logs/poems/*.eval
 
-Prints the tables and writes heatmaps to `plots/poems/`.
+Prints the tables and writes one 2x2 figure of heatmaps to `plots/poems/grid.png`:
+rows blind -> author, columns no gt -> gt.
 """
 
 import math
@@ -67,10 +68,10 @@ def self_preference(table: pd.DataFrame) -> pd.Series:
     })
 
 
-def heatmap(table: pd.DataFrame, title: str, path: Path) -> None:
-    fig, ax = plt.subplots(figsize=(5, 4.2))
+def heatmap(ax, table: pd.DataFrame, title: str, vmin: float):
+    """One poet x judge panel; returns the image for a shared colourbar."""
     # one hue, light to dark: the cells encode magnitude only
-    image = ax.imshow(table.to_numpy(dtype=float), cmap="Blues", vmin=SCORE_MIN, vmax=SCORE_MAX)
+    image = ax.imshow(table.to_numpy(dtype=float), cmap="Blues", vmin=vmin, vmax=SCORE_MAX)
     ax.set_xticks(range(len(table.columns)), table.columns)
     ax.set_yticks(range(len(table.index)), table.index)
     ax.set_xlabel("poet")
@@ -84,13 +85,32 @@ def heatmap(table: pd.DataFrame, title: str, path: Path) -> None:
             value = table.loc[judge, poet]
             if pd.isna(value):
                 continue
-            dark = (value - SCORE_MIN) / (SCORE_MAX - SCORE_MIN) > 0.6
+            dark = (value - vmin) / (SCORE_MAX - vmin) > 0.6
             ax.text(j, i, f"{value:.1f}", ha="center", va="center",
                     color="white" if dark else "#222",
                     fontweight="bold" if judge == poet else None)
-    fig.colorbar(image, ax=ax, shrink=0.8, label="mean score")
-    fig.tight_layout()
-    fig.savefig(path, dpi=150)
+    return image
+
+
+def figure(tables: dict[tuple[bool, bool], pd.DataFrame], path: Path) -> None:
+    """2x2 of panels: rows blind -> author (top to bottom), columns no gt -> gt."""
+    fig, axes = plt.subplots(2, 2, figsize=(10, 8.5), squeeze=False)
+    # colour scale from the smallest mean (rounded down) to the top score, so
+    # the panels share one scale but aren't all squashed into the dark end
+    vmin = math.floor(min(table.min().min() for table in tables.values()))
+    image = None
+    for row, told_author in enumerate((False, True)):
+        for col, told_gt in enumerate((False, True)):
+            ax = axes[row][col]
+            table = tables.get((told_author, told_gt))
+            if table is None:
+                ax.set_axis_off()
+                continue
+            image = heatmap(ax, table, variant_name(told_author, told_gt), vmin)
+    if image is not None:
+        fig.colorbar(image, ax=axes, shrink=0.6, label="mean score")
+    fig.suptitle("mean score by judge (rows) and poet (columns)", x=0.02, ha="left")
+    fig.savefig(path, dpi=150, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -101,6 +121,7 @@ def main(paths: list[str]) -> None:
     PLOTS.mkdir(parents=True, exist_ok=True)
     unscored = df["score"].isna().sum()
     print(f"{len(df)} scores, {unscored} unscored\n")
+    tables = {}
     for told_author in (False, True):
         for told_gt in (False, True):
             name = variant_name(told_author, told_gt)
@@ -108,11 +129,13 @@ def main(paths: list[str]) -> None:
             if subset.empty:
                 continue
             table = grid(subset)
+            tables[(told_author, told_gt)] = table
             print(f"== {name} ==  (rows: judge, columns: poet)")
             print(table.round(2).to_string())
             print("self-preference:", self_preference(table).round(2).to_dict(), "\n")
-            heatmap(table, f"mean score, {name}", PLOTS / f"grid_{name}.png")
-    print(f"heatmaps in {PLOTS}/")
+    path = PLOTS / "grid.png"
+    figure(tables, path)
+    print(f"figure: {path}")
 
 
 if __name__ == "__main__":
