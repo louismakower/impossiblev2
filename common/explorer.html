@@ -149,10 +149,13 @@ const bandColour = i => Array.isArray(CHART.palette)
     : `var(--band-${i % 4})`;
 
 // The band a sample falls in: one scorer's value when the chart names a
-// scorer, else a scanner's value, or one field of it when the scanner
-// answers a structured object.
+// scorer, a pass only if every scorer passed when it names several (an
+// unscored sample counts as a fail, as in common/hack.py), else a scanner's
+// value, or one field of it when the scanner answers a structured object.
 function bandOf(sample) {
   if (CHART.scorer) return sample.scores.find(s => s.scorer === CHART.scorer)?.value ?? null;
+  if (CHART.scorers) return CHART.scorers.every(name =>
+    sample.scores.find(s => s.scorer === name)?.value === "C") ? "C" : "I";
   const result = sample.scanners[CHART.scanner];
   if (!result) return null;
   return CHART.field ? result.value?.[CHART.field] : result.value;
@@ -181,7 +184,7 @@ function drawPanel(model) {
     "aria-label": `${CHART.title} ${model}` });
   const y = v => M.top + PLOT_H - (v / MAX) * PLOT_H;
 
-  for (let v = 0; v <= MAX; v++) {
+  for (let v = 0; v <= MAX; v += 10) {
     svg.append(el("line", { class: "gridline", x1: M.left, x2: width - M.right, y1: y(v), y2: y(v) }));
     svg.append(el("text", { class: "tick", x: M.left - 8, y: y(v) + 4, "text-anchor": "end" }, String(v)));
   }

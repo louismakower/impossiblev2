@@ -1,0 +1,458 @@
+<title>Prompt Grid</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #f2f3f5;
+    --surface: #ffffff;
+    --text: #1b1f27;
+    --muted: #626b79;
+    --line: #d7dbe2;
+    --line-strong: #b9c0ca;
+    --pill: #e8eaee;
+    --pill-on: #1b1f27;
+    --pill-on-text: #ffffff;
+    --scenario: #2f6b9c;
+    --grading: #a85f14;
+    --budget: #6a4ca3;
+    --flash: rgba(168, 95, 20, 0.18);
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14171c;
+      --surface: #1c2027;
+      --text: #e5e8ed;
+      --muted: #9aa3b0;
+      --line: #2c323c;
+      --line-strong: #3d4551;
+      --pill: #262b34;
+      --pill-on: #e5e8ed;
+      --pill-on-text: #14171c;
+      --scenario: #6fa6d6;
+      --grading: #dc9a4f;
+      --budget: #a98ad9;
+      --flash: rgba(220, 154, 79, 0.22);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14171c;
+    --surface: #1c2027;
+    --text: #e5e8ed;
+    --muted: #9aa3b0;
+    --line: #2c323c;
+    --line-strong: #3d4551;
+    --pill: #262b34;
+    --pill-on: #e5e8ed;
+    --pill-on-text: #14171c;
+    --scenario: #6fa6d6;
+    --grading: #dc9a4f;
+    --budget: #a98ad9;
+    --flash: rgba(220, 154, 79, 0.22);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .page {
+    max-width: 880px;
+    margin: 0 auto;
+    padding-block: 28px 64px;
+    padding-inline: 16px;
+    display: grid;
+    gap: 28px;
+  }
+  h1 {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  h2 {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin: 0 0 12px;
+  }
+  .lede { color: var(--muted); margin: 0; max-width: 62ch; }
+  .lede code, td code, .note code {
+    font-family: var(--mono);
+    font-size: 0.92em;
+  }
+
+  /* controls */
+  .controls {
+    display: grid;
+    gap: 10px;
+    padding: 16px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  .control {
+    display: grid;
+    grid-template-columns: 82px 1fr;
+    gap: 10px;
+    align-items: baseline;
+  }
+  .control > span {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pills button {
+    font: inherit;
+    font-size: 14px;
+    font-family: var(--mono);
+    padding: 4px 11px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background: var(--pill);
+    color: var(--text);
+    cursor: pointer;
+  }
+  .pills button:hover { border-color: var(--line-strong); }
+  .pills button:focus-visible { outline: 2px solid var(--scenario); outline-offset: 2px; }
+  .pills button[aria-pressed="true"] {
+    background: var(--pill-on);
+    color: var(--pill-on-text);
+  }
+  @media (max-width: 480px) {
+    .control { grid-template-columns: 1fr; gap: 4px; }
+  }
+
+  /* the assembled message */
+  .message-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .copy {
+    font: inherit;
+    font-size: 13px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+  }
+  .copy:focus-visible { outline: 2px solid var(--scenario); outline-offset: 2px; }
+  .message {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .piece {
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    border-left: 4px solid var(--piece);
+  }
+  .piece + .piece { border-top: 1px solid var(--line); }
+  .piece > .label {
+    padding: 14px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--piece);
+  }
+  .piece > pre {
+    margin: 0;
+    padding: 14px 16px 14px 0;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .piece.empty > pre { color: var(--muted); font-family: var(--sans); font-style: italic; }
+  .piece.changed > pre { animation: flash 900ms ease-out; }
+  @keyframes flash {
+    from { background: var(--flash); }
+    to { background: transparent; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .piece.changed > pre { animation: none; }
+  }
+  @media (max-width: 480px) {
+    .piece { grid-template-columns: 1fr; }
+    .piece > .label { padding-bottom: 0; }
+    .piece > pre { padding-left: 12px; }
+  }
+  .piece.scenario { --piece: var(--scenario); }
+  .piece.grading { --piece: var(--grading); }
+  .piece.budget { --piece: var(--budget); }
+
+  /* secondary panels */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 16px;
+    display: grid;
+    gap: 12px;
+  }
+  .panel p, .note { margin: 0; }
+  .panel pre {
+    margin: 0;
+    padding: 10px 12px;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    background: var(--bg);
+    border-radius: 6px;
+  }
+  .table-wrap { overflow-x: auto; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 14px;
+  }
+  th, td {
+    text-align: left;
+    vertical-align: top;
+    padding: 8px 10px;
+    border-top: 1px solid var(--line);
+    white-space: pre-line;
+  }
+  thead th {
+    border-top: 0;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+  th:first-child, td:first-child { color: var(--muted); white-space: nowrap; }
+  .table-wrap td { font-family: var(--mono); font-size: 13px; }
+  .table-wrap td:first-child { font-family: var(--sans); font-size: 14px; }
+  .on { background: var(--bg); }
+  details summary {
+    cursor: pointer;
+    font-weight: 500;
+  }
+  details summary:focus-visible { outline: 2px solid var(--scenario); outline-offset: 2px; }
+  details > pre { margin-top: 10px; }
+  .judge-templates { display: grid; gap: 10px; }
+</style>
+
+<div class="page">
+  <header>
+    <h1>Prompt Grid</h1>
+    <p class="lede">Every sample's first user message is three pieces joined by blank lines. Pick a cell to see them; the pieces that differ from the last cell flash. Every cell is graded by the same scorers whatever it is told.</p>
+  </header>
+
+  <section class="controls" id="controls">
+    <div class="control"><span>Task</span><div class="pills" id="task-pills"></div></div>
+    <div class="control"><span>Variant</span><div class="pills" id="variant-pills"></div></div>
+    <div class="control"><span>Context</span><div class="pills" id="context-pills"></div></div>
+    <div class="control"><span>Grading</span><div class="pills" id="grading-pills"></div></div>
+  </section>
+
+  <section>
+    <div class="message-head">
+      <h2>First user message</h2>
+      <button class="copy" id="copy" type="button">Copy message</button>
+    </div>
+    <div class="message">
+      <div class="piece scenario" id="piece-scenario"><div class="label">Scenario</div><pre></pre></div>
+      <div class="piece grading" id="piece-grading"><div class="label">Grading</div><pre></pre></div>
+      <div class="piece budget" id="piece-budget"><div class="label">Turn budget</div><pre></pre></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>During the conversation</h2>
+    <div class="panel" id="during"></div>
+  </section>
+
+  <section>
+    <h2>Also set by the variant</h2>
+    <div class="panel"><div class="table-wrap" id="levers"></div></div>
+  </section>
+
+  <section>
+    <h2>Judge prompts</h2>
+    <div class="panel" id="judge"></div>
+  </section>
+</div>
+
+<script type="application/json" id="data">__DATA__</script>
+<script>
+  const DATA = JSON.parse(document.getElementById("data").textContent);
+  const JUDGE_KEY = "report_judge_prompt";
+
+  const state = { task: DATA.tasks[0].name, variant: null, context: null, grading: null };
+  let last = null;
+
+  function task() { return DATA.tasks.find(t => t.name === state.task); }
+  function variant() { return task().variants.find(v => v.name === state.variant); }
+
+  // keep the choice valid when the task changes
+  function normalise() {
+    const t = task();
+    if (!t.variants.some(v => v.name === state.variant)) state.variant = t.variants[0].name;
+    if (!t.contexts.includes(state.context)) state.context = t.contexts[t.contexts.length - 1];
+    if (!t.gradings.includes(state.grading)) state.grading = t.gradings[0];
+  }
+
+  function readHash() {
+    const parts = location.hash.replace(/^#/, "").split("/");
+    if (parts.length === 4 && DATA.tasks.some(t => t.name === parts[0])) {
+      [state.task, state.variant, state.context, state.grading] = parts;
+    }
+    normalise();
+  }
+
+  function writeHash() {
+    history.replaceState(null, "", `#${state.task}/${state.variant}/${state.context}/${state.grading}`);
+  }
+
+  function pills(id, options, key) {
+    const el = document.getElementById(id);
+    el.replaceChildren(...options.map(opt => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = opt;
+      b.id = `${key}-${opt}`;
+      b.setAttribute("aria-pressed", String(state[key] === opt));
+      b.addEventListener("click", () => { state[key] = opt; normalise(); render(); });
+      return b;
+    }));
+  }
+
+  function el(tag, attrs = {}, ...children) {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === "class") e.className = v; else e.setAttribute(k, v);
+    }
+    e.append(...children);
+    return e;
+  }
+
+  function pieces() {
+    const v = variant();
+    const scenario = v.prompts[state.context].trim();
+    const grading = v.gradings[state.context][state.grading].trim();
+    const budget = v.turn_limits[state.context].trim();
+    return { scenario, grading, budget };
+  }
+
+  function assembled(p) {
+    return [p.scenario, p.grading, p.budget].filter(Boolean).join("\n\n");
+  }
+
+  function setPiece(name, text, emptyNote) {
+    const piece = document.getElementById(`piece-${name}`);
+    const pre = piece.querySelector("pre");
+    piece.classList.toggle("empty", !text);
+    pre.textContent = text || emptyNote;
+    piece.classList.remove("changed");
+    if (last && last[name] !== text) {
+      // restart the animation even if the class was just removed
+      void pre.offsetWidth;
+      piece.classList.add("changed");
+    }
+  }
+
+  function renderDuring() {
+    const v = variant();
+    const box = document.getElementById("during");
+    const children = [];
+    if (v.countdown) {
+      children.push(el("p", {}, "After every reply from the agent, a user message with the countdown. When the reply made a tool call:"));
+      children.push(el("pre", {}, DATA.countdown.tool_call));
+      children.push(el("p", {}, "When it did not:"));
+      children.push(el("pre", {}, DATA.countdown.no_tool_call));
+    } else {
+      children.push(el("p", {}, "No countdown. When a reply makes no tool call, the agent gets Inspect's default nudge to continue or call the submit tool."));
+    }
+    const follow = v.follow_ups[state.context] || {};
+    const turns = Object.keys(follow).map(Number).sort((a, b) => a - b);
+    if (turns.length) {
+      children.push(el("p", {}, `Scripted user messages in the ${state.context} context, sent after the agent's n-th reply:`));
+      const table = el("table", {},
+        el("thead", {}, el("tr", {}, el("th", {}, "after reply"), el("th", {}, "message"))),
+        el("tbody", {}, ...turns.map(n => el("tr", {}, el("td", {}, String(n)), el("td", {}, follow[String(n)])))));
+      children.push(el("div", { class: "table-wrap" }, table));
+    } else if (!v.countdown) {
+      children.push(el("p", { class: "note" }, `No scripted follow-ups in the ${state.context} context.`));
+    }
+    box.replaceChildren(...children);
+  }
+
+  function renderLevers() {
+    const t = task();
+    const names = t.variants.map(v => v.name);
+    const head = el("tr", {}, el("th", {}, ""), ...names.map(n => el("th", { class: n === state.variant ? "on" : "" }, n)));
+    const rows = t.levers.map(row =>
+      el("tr", {}, el("td", {}, row[0]), ...row.slice(1).map((cell, i) => el("td", { class: names[i] === state.variant ? "on" : "" }, cell))));
+    document.getElementById("levers").replaceChildren(el("table", {}, el("thead", {}, head), el("tbody", {}, ...rows)));
+  }
+
+  function renderJudge() {
+    const t = task();
+    const box = document.getElementById("judge");
+    const children = [
+      el("p", {}, `What counts as cheating, as the judge is told it. The ${JUDGE_KEY} cells show the agent this paragraph verbatim.`),
+      el("pre", {}, t.judge_criteria),
+    ];
+    for (const [name, template] of Object.entries(t.judge_templates)) {
+      children.push(el("details", {}, el("summary", {}, name), el("pre", {}, template)));
+    }
+    box.replaceChildren(...children);
+  }
+
+  function render() {
+    const t = task();
+    pills("task-pills", DATA.tasks.map(x => x.name), "task");
+    pills("variant-pills", t.variants.map(v => v.name), "variant");
+    pills("context-pills", t.contexts, "context");
+    pills("grading-pills", t.gradings, "grading");
+
+    const p = pieces();
+    const budgetNote = variant().countdown
+      ? "No turn budget sentence in this cell."
+      : "No turn budget in the first message; the budget arrives as a scripted follow-up, see below.";
+    setPiece("scenario", p.scenario, "");
+    setPiece("grading", p.grading, "No grading text in this cell: the agent is told nothing about how it is checked.");
+    setPiece("budget", p.budget, budgetNote);
+    last = p;
+
+    renderDuring();
+    renderLevers();
+    renderJudge();
+    writeHash();
+  }
+
+  document.getElementById("copy").addEventListener("click", async (ev) => {
+    const button = ev.currentTarget;
+    try {
+      await navigator.clipboard.writeText(assembled(pieces()));
+      button.textContent = "Copied";
+    } catch {
+      button.textContent = "Copy failed";
+    }
+    setTimeout(() => { button.textContent = "Copy message"; }, 1500);
+  });
+
+  window.addEventListener("hashchange", () => { readHash(); render(); });
+  readHash();
+  render();
+</script>

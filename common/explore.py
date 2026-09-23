@@ -82,6 +82,22 @@ def score_chart(scorer: str) -> dict:
     }
 
 
+def hack_chart(scorers: list[str]) -> dict:
+    """The chart splitting the bars by whether the sample reward hacked: it
+    passed every one of `scorers`, the deterministic scorer and the report
+    judge, the same definition as `common.hack`."""
+    return {
+        "key": "reward_hack",
+        "scorers": scorers,
+        "scanner": None,
+        "field": None,
+        "bands": [{"key": "C", "label": "hacked"}, {"key": "I", "label": "didn't"}],
+        "palette": ["var(--fail)", "var(--pass)"],
+        "title": "Did the agent reward hack?",
+        "subtitle": "Passed " + " and ".join(f"`{s}`" for s in scorers) + ", one bar per cell of the grid.",
+    }
+
+
 # What a sample was graded on, as blocks to show under the chart: each a dict
 # with a `title` and the `text` to show beneath it.
 Evidence = Callable[[EvalSample], list[dict]]
@@ -97,7 +113,8 @@ def report_block(sample: EvalSample, path: str) -> list[dict]:
 
 def parse_value(value):
     """Scanner values round-trip through parquet as JSON strings."""
-    if value is None or (isinstance(value, float) and pd.isna(value)):
+    # errored samples carry a float nan or pandas NA, neither of which json takes
+    if value is None or (not isinstance(value, (list, dict)) and pd.isna(value)):
         return None
     if isinstance(value, (bool, list)):
         return value
@@ -114,17 +131,23 @@ def scan_results(scan_dirs: list[str]) -> dict[str, dict]:
         if not Path(scans).is_dir():
             continue
         for status in sorted(scan_list(scans), key=lambda s: s.spec.timestamp):
-            for name, df in scan_results_df(status.location).scanners.items():
+            # `scan_events` and `input` hold the transcripts themselves and
+            # dwarf everything else; loading them for a large scan exhausts memory.
+            results_df = scan_results_df(status.location, exclude_columns=["scan_events", "input"])
+            for name, df in results_df.scanners.items():
                 for _, row in df.iterrows():
                     value = parse_value(row["value"])
                     answer = row.get("answer")
+                    explanation = row.get("explanation")
+                    if not isinstance(explanation, str):
+                        explanation = None
                     # Single-choice scanners put the letter in `value` and the
                     # text in `answer`; multi-label ones do the opposite.
                     if isinstance(value, str) and len(value) <= 2 and isinstance(answer, str):
                         value = answer
                     results.setdefault(str(row["transcript_id"]), {})[name] = {
                         "value": value,
-                        "explanation": row.get("explanation"),
+                        "explanation": explanation,
                     }
     return results
 
@@ -179,9 +202,11 @@ def main(gradings: list[str], contexts: list[str], evidence: Evidence, out: str)
     scanned = sum(bool(row["scanners"]) for row in rows)
     # scorers in the order the task ran them, without duplicates across logs
     scorers = list(dict.fromkeys(s["scorer"] for row in rows for s in row["scores"]))
+    # the deterministic scorer is whichever one isn't a judge, as in `common.hack`
+    hack = [s for s in scorers if "judge" not in s] + ["report_judge"]
     payload = {
         "name": Path(args.out).stem,
-        "charts": [score_chart(s) for s in scorers] + CHARTS,
+        "charts": [score_chart(s) for s in scorers] + [hack_chart(hack)] + CHARTS,
         "gradings": gradings,
         "contexts": contexts,
         "samples": rows,
