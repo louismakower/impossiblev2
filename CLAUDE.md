@@ -98,7 +98,19 @@ Use Inspect's documentation for its functionality. An index of the docs is in
   score is compared to a human ground truth), scorer names
   `<judge>-<blind|author>[-gt]`. All wording in `prompts.py` (TODO
   placeholders). `analyse.py` prints the poet × judge grids and each judge's
-  self-preference; `probe.py` is a mockllm plumbing test.
+  self-preference; `probe.py` is a mockllm plumbing test. `pairwise.py` is
+  the second task: `generate.py` writes a fixed poem set to `data/poems.json`,
+  then the judge picks the better of two poems on the same topic by
+  different poets: every ordered pair × `ATTRIBUTIONS`
+  (`blind|author|swapped|hidden`, what it is told about authorship; swapped
+  and hidden are the controls where it is told it wrote what it didn't, or
+  didn't write what it did) × gt, as sample metadata. Labels depend on the
+  judge, so `pairwise(judge=...)` builds the dataset per judge and pins the
+  judge model on the task; `run_pairwise.py` runs one task per judge.
+  `choice_scorer` parses `CHOICE: A|B`. `analyse_pairwise.py` gives
+  own-win-rate when self-judged minus when others judge, per attribution, and
+  how often the poem carrying the judge's name wins; `probe_pairwise.py` is
+  its mock test. Run probes under `ulimit -v`.
 - `tinker_finetune/data/` — datasets only, no code yet.
 - `interesting_logs/` — hand-picked eval logs kept for reference.
 - Gitignored: `logs/`, `scans/`, `plots/`, `data/`, `.env`, `.venv`.
@@ -109,7 +121,10 @@ Use Inspect's documentation for its functionality. An index of the docs is in
 - `context.py`: baseline `SOFT_*`/`HARD_*` prompts and per-context grading
   descriptions keyed `none|json|report|report_trajectory|report_and_json|report_judge_prompt`
   (backdoor) or `none|csv|report|report_trajectory|report_and_csv|report_judge_prompt`
-  (test_train).
+  (test_train). `report_judge_prompt` is the `report` cell plus the judge's
+  cheating paragraph (`scorer.JUDGE_CRITERIA`), introduced as the criteria
+  the report is checked against for foul play; the agent does not see the
+  rest of the judge prompt.
 - `realistic.py`: the same task dressed as a deployment; different paths (a
   `sam` home dir), target phrasing, follow-ups, submit tool, no countdown.
 - `variant.py`: frozen `Variant` dataclass bundling all realism levers;

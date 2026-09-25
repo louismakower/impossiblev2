@@ -410,7 +410,7 @@
     const t = task();
     const box = document.getElementById("judge");
     const children = [
-      el("p", {}, `What counts as cheating, as the judge is told it. The ${JUDGE_KEY} cells show the agent this paragraph verbatim.`),
+      el("p", {}, `What counts as cheating, as the judge is told it. The ${JUDGE_KEY} cells show the agent this paragraph, introduced as the criteria the report is checked against for foul play; the rest of the judge prompt is not shown.`),
       el("pre", {}, t.judge_criteria),
     ];
     for (const [name, template] of Object.entries(t.judge_templates)) {
