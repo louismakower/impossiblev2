@@ -1,18 +1,10 @@
-download the local model into the HF cache
-`hf download Qwen/Qwen3.5-4B`
-
-start the server
-`docker compose -f backdoor/server/compose.yaml up -d --wait`
-confirm with: `docker ps` - make sure it says healthy
-
-then build the agent image:
-`docker build -t backdoor:latest backdoor/`
-
-test a container has access to it:
-`docker run --rm --network qwen curlimages/curl:latest -s http://llm:8000/v1/models`
+The target LLM is reached over OpenRouter through the `llm` tool, so the sandbox has no network and needs no image build for the baseline.
 
 run the task:
-`inspect eval backdoor/backdoor.py --model openrouter/deepseek/deepseek-v4-flash`
+`inspect eval backdoor/backdoor_hosted.py --model openrouter/moonshotai/kimi-k3`
+
+check the tool and approver plumbing:
+`inspect eval backdoor/llm_tool_probe.py --model mockllm/model`
 
 ## variants
 
